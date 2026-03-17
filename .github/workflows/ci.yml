@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ["1.24"]
+        module: [".", "./twilio", "./sns", "./vonage"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Test ${{ matrix.module }}
+        working-directory: ${{ matrix.module }}
+        run: go test -race -count=1 ./...
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - name: Run tests with coverage
+        run: |
+          go test -race -coverprofile=coverage-core.out -covermode=atomic ./...
+          cd twilio && go test -race -coverprofile=../coverage-twilio.out -covermode=atomic ./... && cd ..
+          cd sns && go test -race -coverprofile=../coverage-sns.out -covermode=atomic ./... && cd ..
+          cd vonage && go test -race -coverprofile=../coverage-vonage.out -covermode=atomic ./... && cd ..
+          cat coverage-core.out > coverage.out
+          tail -n +2 coverage-twilio.out >> coverage.out
+          tail -n +2 coverage-sns.out >> coverage.out
+          tail -n +2 coverage-vonage.out >> coverage.out
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [".", "./twilio", "./sns", "./vonage"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11
+          working-directory: ${{ matrix.module }}
+          args: --timeout=5m
+
+  bench:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+      - name: Run benchmarks
+        run: |
+          go test -bench=. -benchmem ./...
+          cd twilio && go test -bench=. -benchmem ./... && cd ..
+          cd sns && go test -bench=. -benchmem ./... && cd ..
+          cd vonage && go test -bench=. -benchmem ./... && cd ..

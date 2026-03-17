@@ -1,0 +1,51 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(core)"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: gomod
+    directory: /twilio
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(twilio)"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: gomod
+    directory: /sns
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(sns)"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: gomod
+    directory: /vonage
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(vonage)"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+    labels:
+      - ci
+    open-pull-requests-limit: 5
