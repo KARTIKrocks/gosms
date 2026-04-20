@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-04-20
+
+### Added
+
+- MSG91 provider (`github.com/KARTIKrocks/gosms/msg91`) targeting the Flow API (v5) for DLT-compliant sending in India
+  - Template-driven messaging via `SetVar` and `SetTemplateID` on `Message.Metadata`
+  - Bulk send groups recipients by template + sender into a single API call
+  - Provider-specific `VerifyOTP` / `RetryOTP` methods (not on the `Provider` interface)
+  - `ParseWebhook` for MSG91 delivery report callbacks
+  - Transactional and promotional route support
+- `lint-fix` Makefile target running `golangci-lint run --fix` across all modules
+- README section documenting the MSG91 provider
+
 ## [0.1.0] - 2026-03-17
 
 ### Added
