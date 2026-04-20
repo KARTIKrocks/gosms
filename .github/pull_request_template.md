@@ -16,7 +16,7 @@ Fixes #
 
 ## Checklist
 
-- [ ] All checks pass (`make ci`)
+- [ ] All checks pass (`make all`)
 - [ ] Linter passes (`make lint`)
 - [ ] New code has tests where appropriate
 - [ ] Breaking changes are documented

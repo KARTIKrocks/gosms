@@ -11,6 +11,9 @@ coverage*.out
 *.so
 *.dylib
 
+# website
+gosms-website
+
 # Go workspace sum (local development only)
 go.work.sum
 

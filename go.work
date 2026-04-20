@@ -5,4 +5,5 @@ use (
 	./twilio
 	./sns
 	./vonage
+	./msg91
 )

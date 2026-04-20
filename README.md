@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/KARTIKrocks/gosms/branch/main/graph/badge.svg)](https://codecov.io/gh/KARTIKrocks/gosms)
 
-A unified SMS sending library for Go with support for multiple providers including Twilio, AWS SNS, and Vonage.
+A unified SMS sending library for Go with support for multiple providers including Twilio, AWS SNS, Vonage, and MSG91.
 
 Each provider is a **separate Go module**, so you only download the dependencies you actually need.
 
@@ -24,6 +24,7 @@ go get github.com/KARTIKrocks/gosms
 go get github.com/KARTIKrocks/gosms/twilio
 go get github.com/KARTIKrocks/gosms/sns
 go get github.com/KARTIKrocks/gosms/vonage
+go get github.com/KARTIKrocks/gosms/msg91
 ```
 
 ## Quick Start
@@ -99,6 +100,48 @@ if err != nil {
 client := gosms.NewClient(provider)
 result, err := client.Send(ctx, "+15559876543", "Hello from Vonage!")
 ```
+
+### MSG91
+
+MSG91 is the standard SMS gateway for India. It uses DLT-approved Flow templates;
+variables are passed via `msg91.SetVar`, not the `Body` field.
+
+```go
+import (
+    "github.com/KARTIKrocks/gosms"
+    "github.com/KARTIKrocks/gosms/msg91"
+)
+
+provider, err := msg91.NewProvider(msg91.Config{
+    AuthKey:    "your_authkey",
+    SenderID:   "SENDER",         // 6-char DLT sender ID
+    TemplateID: "tmpl_xxx",       // DLT-approved Flow template
+    Route:      msg91.RouteTransactional,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+client := gosms.NewClient(provider)
+
+msg := gosms.NewMessage("+919876543210", "")
+msg91.SetVar(msg, "name", "Kartik")
+msg91.SetVar(msg, "otp", "1234")
+
+result, err := client.SendMessage(ctx, msg)
+```
+
+MSG91 also supports server-side OTP verification. `VerifyOTP` and `RetryOTP`
+are provider-specific methods, not part of the `Provider` interface:
+
+```go
+vr, err := provider.VerifyOTP(ctx, "+919876543210", "1234")
+if err == nil && vr.Verified {
+    // OTP matched
+}
+```
+
+Delivery status is webhook-driven; parse incoming callbacks with `msg91.ParseWebhook(r)`.
 
 ## Features
 
