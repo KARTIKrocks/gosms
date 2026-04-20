@@ -11,6 +11,7 @@ linters:
     - gocritic
     - gocyclo
     - revive
+    - prealloc
   settings:
     gocyclo:
       min-complexity: 15
@@ -19,6 +20,8 @@ linters:
         - name: exported
           disabled: true
   exclusions:
+    paths:
+      - "gosms-website/"
     rules:
       - linters:
           - errcheck
@@ -31,3 +34,6 @@ formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+      gofmt:
+        simplify: true

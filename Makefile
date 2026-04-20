@@ -1,10 +1,10 @@
-MODULES = . ./twilio ./sns ./vonage
-SUB_MODULES = ./twilio ./sns ./vonage
+MODULES = . ./twilio ./sns ./vonage ./msg91
+SUB_MODULES = ./twilio ./sns ./vonage ./msg91
 MODULE_PATH = github.com/KARTIKrocks/gosms
 
-.PHONY: all test test-race coverage lint fmt vet tidy build bench clean ci release-prep release-local
+.PHONY: all test test-race coverage lint lint-fix fmt vet tidy build bench clean ci release-prep release-local
 
-all: tidy fmt lint test
+all: tidy fmt vet lint build test
 
 ## Build all modules
 build:
@@ -45,6 +45,13 @@ lint:
 	@for mod in $(MODULES); do \
 		echo "==> Linting $$mod"; \
 		(cd $$mod && golangci-lint run --timeout=5m ./...) || exit 1; \
+	done
+
+## Run linter with auto-fix across all modules
+lint-fix:
+	@for mod in $(MODULES); do \
+		echo "==> Lint-fixing $$mod"; \
+		(cd $$mod && golangci-lint run --fix --timeout=5m ./...) || exit 1; \
 	done
 
 ## Format code

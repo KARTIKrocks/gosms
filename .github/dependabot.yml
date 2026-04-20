@@ -40,6 +40,16 @@ updates:
       - dependencies
     open-pull-requests-limit: 5
 
+  - package-ecosystem: gomod
+    directory: /msg91
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(msg91)"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
