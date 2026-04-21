@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/KARTIKrocks/gosms"
 	"github.com/KARTIKrocks/gosms/msg91"
@@ -69,13 +70,32 @@ func main() {
 		fmt.Printf("Bulk: to=%s status=%s\n", r.To, r.Status)
 	}
 
-	// 4. Verify an OTP sent earlier (provider-specific, not on the
-	//    Provider interface — type-assert or use the provider directly).
+	// 4. Dedicated OTP flow via gosms.OTPProvider. MSG91 generates the
+	//    code server-side when OTPRequest.OTP is empty.
+	otpRes, err := provider.SendOTP(ctx, &gosms.OTPRequest{
+		Phone:  to,
+		Length: 6,
+		Expiry: 5 * time.Minute,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("OTP sent: request_id=%s\n", otpRes.MessageID)
+
+	// 5. Verify an OTP submitted by the user.
 	if code := os.Getenv("MSG91_VERIFY_OTP"); code != "" {
 		vr, err := provider.VerifyOTP(ctx, to, code)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("OTP verified=%v message=%q\n", vr.Verified, vr.Message)
+	}
+
+	// 6. Resend the last OTP over a different channel ("text" or "voice").
+	if os.Getenv("MSG91_RESEND_OTP") != "" {
+		if err := provider.ResendOTP(ctx, to, "voice"); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("OTP resent via voice")
 	}
 }

@@ -131,13 +131,45 @@ msg91.SetVar(msg, "otp", "1234")
 result, err := client.SendMessage(ctx, msg)
 ```
 
-MSG91 also supports server-side OTP verification. `VerifyOTP` and `RetryOTP`
-are provider-specific methods, not part of the `Provider` interface:
+**Template variables and `Body` fallback.** MSG91 Flow templates reference
+placeholders like `##name##` or `##otp##`. Set each one with `msg91.SetVar`.
+For templates with a single `##body##` placeholder, any non-empty `Message.Body`
+is automatically passed as `body` when no vars are set — so the unified
+`client.Send(ctx, to, text)` path works without extra wiring.
+
+**Per-message overrides.** Use `msg91.SetTemplateID(msg, "tmpl_other")` to
+override `Config.TemplateID` for a single message, or `msg.WithFrom("OTHER")`
+to override the sender ID.
+
+**Phone normalization.** Non-E.164 numbers up to 10 digits are prefixed with
+`Config.Country` (default `91`). `+919876543210`, `919876543210`, and
+`9876543210` all normalize identically.
+
+**Bulk.** `SendBulk` groups recipients by effective `(template_id, sender)`
+and sends each group as one Flow API call. Groups larger than
+`Config.MaxRecipientsPerCall` (default 1000) are automatically chunked
+across multiple calls; set a negative value to disable chunking.
+
+**OTP capability.** MSG91 implements the optional `gosms.OTPProvider` for
+the full send / verify / resend flow. Callers holding a `gosms.Provider`
+can detect it with a type assertion:
 
 ```go
-vr, err := provider.VerifyOTP(ctx, "+919876543210", "1234")
-if err == nil && vr.Verified {
-    // OTP matched
+if otp, ok := provider.(gosms.OTPProvider); ok {
+    // MSG91 generates the code server-side when OTPRequest.OTP is empty.
+    _, err := otp.SendOTP(ctx, &gosms.OTPRequest{
+        Phone:  "+919876543210",
+        Length: 6,
+        Expiry: 5 * time.Minute,
+    })
+
+    vr, err := otp.VerifyOTP(ctx, "+919876543210", "123456")
+    if err == nil && vr.Verified {
+        // OTP matched
+    }
+
+    // Resend via "text" or "voice".
+    _ = otp.ResendOTP(ctx, "+919876543210", "voice")
 }
 ```
 
@@ -425,6 +457,7 @@ See the [`examples/`](examples/) directory for runnable examples:
 | [twilio-provider](examples/twilio-provider/) | Sending via Twilio                                   |
 | [sns-provider](examples/sns-provider/)       | Sending via AWS SNS                                  |
 | [vonage-provider](examples/vonage-provider/) | Sending via Vonage                                   |
+| [msg91-provider](examples/msg91-provider/)   | Sending via MSG91 (Flow templates + OTP)             |
 | [multi-provider](examples/multi-provider/)   | Fallback and round-robin strategies                  |
 | [webhooks](examples/webhooks/)               | Delivery status webhook server                       |
 | [mock-testing](examples/mock-testing/)       | Using MockProvider in tests                          |
@@ -452,11 +485,15 @@ gosms/
 ├── vonage/         # Vonage provider (separate module)
 │   ├── go.mod
 │   └── vonage.go
+├── msg91/          # MSG91 provider (separate module)
+│   ├── go.mod
+│   └── msg91.go
 └── examples/       # Runnable examples
     ├── basic/
     ├── twilio-provider/
     ├── sns-provider/
     ├── vonage-provider/
+    ├── msg91-provider/
     ├── multi-provider/
     ├── webhooks/
     ├── mock-testing/
@@ -472,4 +509,4 @@ gosms/
 
 ## License
 
-MIT
+[MIT](LICENSE)
