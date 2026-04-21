@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	gosms "github.com/KARTIKrocks/gosms"
 )
@@ -344,11 +346,265 @@ func TestSendBulkGroupErrorIsolated(t *testing.T) {
 	}
 }
 
+func TestSendBulkSplitsByMixedSenders(t *testing.T) {
+	sendersSeen := []string{}
+	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var fr flowRequest
+		_ = json.Unmarshal(body, &fr)
+		sendersSeen = append(sendersSeen, fr.SenderID)
+		_ = json.NewEncoder(w).Encode(flowResponse{Type: "success", Message: "req_" + fr.SenderID})
+	})
+	defer srv.Close()
+
+	m1 := gosms.NewMessage("+919876500001", "a").WithFrom("SENDR1")
+	m2 := gosms.NewMessage("+919876500002", "b").WithFrom("SENDR1")
+	m3 := gosms.NewMessage("+919876500003", "c").WithFrom("SENDR2")
+
+	results, err := p.SendBulk(context.Background(), []*gosms.Message{m1, m2, m3})
+	if err != nil {
+		t.Fatalf("SendBulk() error = %v", err)
+	}
+	if len(sendersSeen) != 2 {
+		t.Fatalf("sendersSeen = %v, want 2 calls (one per sender)", sendersSeen)
+	}
+	if results[0].MessageID != "req_SENDR1" || results[1].MessageID != "req_SENDR1" {
+		t.Error("first two should share SENDR1 request_id")
+	}
+	if results[2].MessageID != "req_SENDR2" {
+		t.Errorf("result[2].MessageID = %q", results[2].MessageID)
+	}
+}
+
+func TestSendBulkChunksLargeGroups(t *testing.T) {
+	recipientsPerCall := []int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var fr flowRequest
+		_ = json.Unmarshal(body, &fr)
+		recipientsPerCall = append(recipientsPerCall, len(fr.Recipients))
+		_ = json.NewEncoder(w).Encode(flowResponse{Type: "success", Message: fmt.Sprintf("req_%d", len(recipientsPerCall))})
+	}))
+	defer srv.Close()
+
+	p, _ := NewProvider(Config{
+		AuthKey:              "k",
+		SenderID:             "TESTID",
+		TemplateID:           "tmpl_default",
+		BaseURL:              srv.URL,
+		MaxRecipientsPerCall: 2,
+	})
+
+	msgs := []*gosms.Message{
+		gosms.NewMessage("+919876500001", "a"),
+		gosms.NewMessage("+919876500002", "b"),
+		gosms.NewMessage("+919876500003", "c"),
+		gosms.NewMessage("+919876500004", "d"),
+		gosms.NewMessage("+919876500005", "e"),
+	}
+
+	results, err := p.SendBulk(context.Background(), msgs)
+	if err != nil {
+		t.Fatalf("SendBulk() error = %v", err)
+	}
+	if got, want := recipientsPerCall, []int{2, 2, 1}; !equalInts(got, want) {
+		t.Errorf("recipientsPerCall = %v, want %v", got, want)
+	}
+	if len(results) != 5 {
+		t.Fatalf("len(results) = %d", len(results))
+	}
+	for i, r := range results {
+		if r == nil || r.Status != gosms.StatusAccepted {
+			t.Errorf("result[%d] = %+v", i, r)
+		}
+	}
+	// Different chunks yield different request IDs.
+	if results[0].MessageID == results[4].MessageID {
+		t.Errorf("chunks should have distinct request_ids; got shared %q", results[0].MessageID)
+	}
+}
+
+func TestSendBulkChunkingDisabledWithNegativeCap(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		_ = json.NewEncoder(w).Encode(flowResponse{Type: "success", Message: "req"})
+	}))
+	defer srv.Close()
+
+	p, _ := NewProvider(Config{
+		AuthKey:              "k",
+		SenderID:             "TESTID",
+		TemplateID:           "tmpl_default",
+		BaseURL:              srv.URL,
+		MaxRecipientsPerCall: -1,
+	})
+
+	msgs := make([]*gosms.Message, 50)
+	for i := range msgs {
+		msgs[i] = gosms.NewMessage(fmt.Sprintf("+91987650%04d", i), "hi")
+	}
+	if _, err := p.SendBulk(context.Background(), msgs); err != nil {
+		t.Fatalf("SendBulk() error = %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("calls = %d, want 1 (chunking disabled)", calls)
+	}
+}
+
+func equalInts(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func TestGetStatusUnsupported(t *testing.T) {
 	p, _ := NewProvider(Config{AuthKey: "k"})
 	_, err := p.GetStatus(context.Background(), "req_x")
 	if !errors.Is(err, gosms.ErrUnsupported) {
 		t.Errorf("error = %v, want ErrUnsupported", err)
+	}
+}
+
+func TestSendOTPSuccess(t *testing.T) {
+	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != otpSendPath {
+			t.Errorf("path = %q, want %q", r.URL.Path, otpSendPath)
+		}
+		if r.Header.Get("authkey") != "test_authkey" {
+			t.Errorf("authkey header = %q", r.Header.Get("authkey"))
+		}
+		q := r.URL.Query()
+		if q.Get("template_id") != "tmpl_default" {
+			t.Errorf("template_id = %q", q.Get("template_id"))
+		}
+		if q.Get("mobile") != "919876543210" {
+			t.Errorf("mobile = %q", q.Get("mobile"))
+		}
+		if q.Get("otp") != "" {
+			t.Errorf("otp = %q, want empty (server-generated)", q.Get("otp"))
+		}
+		_ = json.NewEncoder(w).Encode(otpResponse{Type: "success", Message: "req_otp_001"})
+	})
+	defer srv.Close()
+
+	res, err := p.SendOTP(context.Background(), &gosms.OTPRequest{Phone: "+919876543210"})
+	if err != nil {
+		t.Fatalf("SendOTP() error = %v", err)
+	}
+	if res.MessageID != "req_otp_001" {
+		t.Errorf("MessageID = %q", res.MessageID)
+	}
+	if res.Phone != "+919876543210" {
+		t.Errorf("Phone = %q", res.Phone)
+	}
+}
+
+func TestSendOTPWithExplicitCode(t *testing.T) {
+	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		if q.Get("otp") != "4242" {
+			t.Errorf("otp = %q, want 4242", q.Get("otp"))
+		}
+		if q.Get("otp_length") != "4" {
+			t.Errorf("otp_length = %q", q.Get("otp_length"))
+		}
+		if q.Get("otp_expiry") != "5" {
+			t.Errorf("otp_expiry minutes = %q", q.Get("otp_expiry"))
+		}
+		_ = json.NewEncoder(w).Encode(otpResponse{Type: "success", Message: "req_otp_002"})
+	})
+	defer srv.Close()
+
+	_, err := p.SendOTP(context.Background(), &gosms.OTPRequest{
+		Phone:  "+919876543210",
+		OTP:    "4242",
+		Length: 4,
+		Expiry: 5 * time.Minute,
+	})
+	if err != nil {
+		t.Fatalf("SendOTP() error = %v", err)
+	}
+}
+
+func TestSendOTPPerCallTemplateOverride(t *testing.T) {
+	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("template_id"); got != "tmpl_otp_x" {
+			t.Errorf("template_id = %q, want tmpl_otp_x", got)
+		}
+		_ = json.NewEncoder(w).Encode(otpResponse{Type: "success", Message: "req_otp_003"})
+	})
+	defer srv.Close()
+
+	_, err := p.SendOTP(context.Background(), &gosms.OTPRequest{
+		Phone:      "+919876543210",
+		TemplateID: "tmpl_otp_x",
+	})
+	if err != nil {
+		t.Fatalf("SendOTP() error = %v", err)
+	}
+}
+
+func TestSendOTPVarsSentAsJSONBody(t *testing.T) {
+	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("content-type = %q", ct)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var got map[string]string
+		if err := json.Unmarshal(body, &got); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		if got["name"] != "Alice" {
+			t.Errorf("name var = %q", got["name"])
+		}
+		_ = json.NewEncoder(w).Encode(otpResponse{Type: "success", Message: "req_otp_004"})
+	})
+	defer srv.Close()
+
+	_, err := p.SendOTP(context.Background(), &gosms.OTPRequest{
+		Phone: "+919876543210",
+		Vars:  map[string]string{"name": "Alice"},
+	})
+	if err != nil {
+		t.Fatalf("SendOTP() error = %v", err)
+	}
+}
+
+func TestSendOTPRequiresPhone(t *testing.T) {
+	p, _ := NewProvider(Config{AuthKey: "k", TemplateID: "t"})
+	if _, err := p.SendOTP(context.Background(), &gosms.OTPRequest{}); !errors.Is(err, gosms.ErrInvalidConfig) {
+		t.Errorf("error = %v, want ErrInvalidConfig", err)
+	}
+	if _, err := p.SendOTP(context.Background(), nil); !errors.Is(err, gosms.ErrInvalidConfig) {
+		t.Errorf("nil request: error = %v, want ErrInvalidConfig", err)
+	}
+}
+
+func TestSendOTPRequiresTemplate(t *testing.T) {
+	p, _ := NewProvider(Config{AuthKey: "k"})
+	_, err := p.SendOTP(context.Background(), &gosms.OTPRequest{Phone: "+919876543210"})
+	if !errors.Is(err, gosms.ErrInvalidConfig) {
+		t.Errorf("error = %v, want ErrInvalidConfig", err)
+	}
+}
+
+func TestSendOTPProviderError(t *testing.T) {
+	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "Invalid authkey"})
+	})
+	defer srv.Close()
+
+	_, err := p.SendOTP(context.Background(), &gosms.OTPRequest{Phone: "+919876543210"})
+	if !errors.Is(err, gosms.ErrInvalidConfig) {
+		t.Errorf("error = %v, want ErrInvalidConfig", err)
 	}
 }
 
@@ -452,9 +708,9 @@ func TestVerifyOTPRequiresInput(t *testing.T) {
 	}
 }
 
-func TestRetryOTPSuccess(t *testing.T) {
+func TestResendOTPSuccess(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != otpRetryPath {
+		if r.URL.Path != otpResendPath {
 			t.Errorf("path = %q", r.URL.Path)
 		}
 		if r.URL.Query().Get("retrytype") != "voice" {
@@ -464,12 +720,12 @@ func TestRetryOTPSuccess(t *testing.T) {
 	})
 	defer srv.Close()
 
-	if err := p.RetryOTP(context.Background(), "+919876543210", "voice"); err != nil {
-		t.Fatalf("RetryOTP() error = %v", err)
+	if err := p.ResendOTP(context.Background(), "+919876543210", "voice"); err != nil {
+		t.Fatalf("ResendOTP() error = %v", err)
 	}
 }
 
-func TestRetryOTPDefaultChannel(t *testing.T) {
+func TestResendOTPDefaultChannel(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("retrytype") != "text" {
 			t.Errorf("retrytype = %q, want text", r.URL.Query().Get("retrytype"))
@@ -478,39 +734,39 @@ func TestRetryOTPDefaultChannel(t *testing.T) {
 	})
 	defer srv.Close()
 
-	if err := p.RetryOTP(context.Background(), "+919876543210", ""); err != nil {
-		t.Fatalf("RetryOTP() error = %v", err)
+	if err := p.ResendOTP(context.Background(), "+919876543210", ""); err != nil {
+		t.Fatalf("ResendOTP() error = %v", err)
 	}
 }
 
-func TestRetryOTPInvalidChannel(t *testing.T) {
+func TestResendOTPInvalidChannel(t *testing.T) {
 	p, _ := NewProvider(Config{AuthKey: "k"})
-	err := p.RetryOTP(context.Background(), "+919876543210", "fax")
+	err := p.ResendOTP(context.Background(), "+919876543210", "fax")
 	if !errors.Is(err, gosms.ErrInvalidConfig) {
 		t.Errorf("error = %v, want ErrInvalidConfig", err)
 	}
 }
 
-func TestRetryOTPProviderError(t *testing.T) {
+func TestResendOTPProviderError(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "boom"})
 	})
 	defer srv.Close()
 
-	err := p.RetryOTP(context.Background(), "+919876543210", "text")
+	err := p.ResendOTP(context.Background(), "+919876543210", "text")
 	if !errors.Is(err, gosms.ErrProviderError) {
 		t.Errorf("error = %v, want ErrProviderError", err)
 	}
 }
 
-func TestRetryOTPAuthErrorMapsToConfig(t *testing.T) {
+func TestResendOTPAuthErrorMapsToConfig(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "Invalid authkey"})
 	})
 	defer srv.Close()
 
-	err := p.RetryOTP(context.Background(), "+919876543210", "text")
+	err := p.ResendOTP(context.Background(), "+919876543210", "text")
 	if !errors.Is(err, gosms.ErrInvalidConfig) {
 		t.Errorf("error = %v, want ErrInvalidConfig", err)
 	}
@@ -536,6 +792,47 @@ func TestParseWebhook(t *testing.T) {
 	}
 	if status.ErrorMessage != "Delivered successfully" {
 		t.Errorf("ErrorMessage = %q", status.ErrorMessage)
+	}
+}
+
+func TestParseWebhookFallsBackToNumericStatusCode(t *testing.T) {
+	form := "requestId=req_num&mobile=919876543210&status=&statusCode=2&description=Absent+subscriber"
+	r := httptest.NewRequest(http.MethodPost, "/webhook?"+form, nil)
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	status, err := ParseWebhook(r)
+	if err != nil {
+		t.Fatalf("ParseWebhook() error = %v", err)
+	}
+	if status.Status != gosms.StatusFailed {
+		t.Errorf("Status = %q, want failed (via code 2)", status.Status)
+	}
+	if status.ErrorCode != "2" {
+		t.Errorf("ErrorCode = %q", status.ErrorCode)
+	}
+}
+
+func TestMapStatusCode(t *testing.T) {
+	tests := []struct {
+		in   string
+		want gosms.DeliveryStatus
+	}{
+		{"1", gosms.StatusDelivered},
+		{"2", gosms.StatusFailed},
+		{"5", gosms.StatusQueued},
+		{"8", gosms.StatusSent},
+		{"9", gosms.StatusRejected},
+		{"16", gosms.StatusExpired},
+		{"17", gosms.StatusRejected},
+		{"25", gosms.StatusRejected},
+		{"26", gosms.StatusRejected},
+		{"999", gosms.StatusUnknown},
+		{"", gosms.StatusUnknown},
+	}
+	for _, tt := range tests {
+		if got := mapStatusCode(tt.in); got != tt.want {
+			t.Errorf("mapStatusCode(%q) = %q, want %q", tt.in, got, tt.want)
+		}
 	}
 }
 

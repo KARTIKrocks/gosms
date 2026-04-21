@@ -7,9 +7,11 @@
 // Template variables are passed via reserved keys on [gosms.Message.Metadata].
 // Use [SetVar] and [SetTemplateID] rather than writing the keys directly.
 //
-// The OTP endpoints (verify/retry) are exposed as provider-specific methods
-// on [*Provider] and are not part of the [gosms.Provider] interface, since
-// OTP verification is not a concept other providers share.
+// MSG91's dedicated OTP endpoints (send/verify/resend) are available via
+// [Provider.SendOTP], [Provider.VerifyOTP] and [Provider.ResendOTP]. The
+// provider also satisfies the optional [gosms.OTPProvider] capability
+// interface, so callers holding a [gosms.Provider] can detect OTP support
+// with a type assertion.
 package msg91
 
 import (
@@ -20,19 +22,25 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	gosms "github.com/KARTIKrocks/gosms"
 )
 
+// Compile-time assertion that Provider satisfies gosms.OTPProvider.
+var _ gosms.OTPProvider = (*Provider)(nil)
+
 const (
-	defaultBaseURL = "https://control.msg91.com"
-	defaultCountry = "91"
+	defaultBaseURL              = "https://control.msg91.com"
+	defaultCountry              = "91"
+	defaultMaxRecipientsPerCall = 1000
 
 	flowPath      = "/api/v5/flow"
+	otpSendPath   = "/api/v5/otp"
 	otpVerifyPath = "/api/v5/otp/verify"
-	otpRetryPath  = "/api/v5/otp/retry"
+	otpResendPath = "/api/v5/otp/retry"
 
 	// metaVarPrefix is the Metadata key prefix for Flow template variables.
 	metaVarPrefix = "msg91.var."
@@ -74,6 +82,14 @@ type Config struct {
 	// ShortURL enables MSG91's URL shortening. Defaults to false.
 	ShortURL bool
 
+	// MaxRecipientsPerCall caps how many recipients SendBulk packs into a
+	// single Flow API call. Bulk groups larger than this are split across
+	// multiple calls (preserving order and per-message result indices).
+	//
+	// Defaults to 1000 (MSG91's practical Flow cap at time of writing).
+	// Set to a negative value to disable chunking entirely.
+	MaxRecipientsPerCall int
+
 	// HTTPClient is a custom HTTP client (optional).
 	HTTPClient *http.Client
 
@@ -107,6 +123,10 @@ func NewProvider(config Config) (*Provider, error) {
 
 	if config.Route == "" {
 		config.Route = RouteTransactional
+	}
+
+	if config.MaxRecipientsPerCall == 0 {
+		config.MaxRecipientsPerCall = defaultMaxRecipientsPerCall
 	}
 
 	return &Provider{config: config}, nil
@@ -144,9 +164,10 @@ func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result,
 }
 
 // SendBulk sends multiple messages using MSG91's native multi-recipient Flow
-// call. Messages are grouped by their effective template ID (per-message
-// override or Config default) and each group is sent as a single API call.
-// All recipients in a group share the same MSG91 request_id.
+// call. Messages are grouped by their effective template ID and sender
+// (per-message overrides or Config defaults); each group is sent as one or
+// more API calls, chunked to [Config.MaxRecipientsPerCall]. Recipients in a
+// single call share the same MSG91 request_id.
 func (p *Provider) SendBulk(ctx context.Context, msgs []*gosms.Message) ([]*gosms.Result, error) {
 	if len(msgs) == 0 {
 		return nil, nil
@@ -192,24 +213,44 @@ func (p *Provider) SendBulk(ctx context.Context, msgs []*gosms.Message) ([]*gosm
 			continue
 		}
 
-		sent, err := p.sendFlow(ctx, b.templateID, b.sender, b.msgs)
-		if err != nil {
-			for _, idx := range b.indices {
-				results[idx] = failedResult(msgs[idx], p.Name(), err)
+		chunkSize := p.chunkSize(len(b.msgs))
+		for start := 0; start < len(b.msgs); start += chunkSize {
+			end := min(start+chunkSize, len(b.msgs))
+			chunkMsgs := b.msgs[start:end]
+			chunkIdx := b.indices[start:end]
+
+			sent, err := p.sendFlow(ctx, b.templateID, b.sender, chunkMsgs)
+			if err != nil {
+				for _, idx := range chunkIdx {
+					results[idx] = failedResult(msgs[idx], p.Name(), err)
+				}
+				continue
 			}
-			continue
-		}
-		for i, idx := range b.indices {
-			if i < len(sent) {
-				results[idx] = sent[i]
-			} else {
-				results[idx] = failedResult(msgs[idx], p.Name(),
-					fmt.Errorf("%w: provider returned fewer results than recipients", gosms.ErrProviderError))
+			for i, idx := range chunkIdx {
+				if i < len(sent) {
+					results[idx] = sent[i]
+				} else {
+					results[idx] = failedResult(msgs[idx], p.Name(),
+						fmt.Errorf("%w: provider returned fewer results than recipients", gosms.ErrProviderError))
+				}
 			}
 		}
 	}
 
 	return results, nil
+}
+
+// chunkSize returns the effective recipients-per-call cap. A negative
+// configured value disables chunking (returns the full group size).
+func (p *Provider) chunkSize(groupSize int) int {
+	max := p.config.MaxRecipientsPerCall
+	if max <= 0 {
+		return groupSize
+	}
+	if max < groupSize {
+		return max
+	}
+	return groupSize
 }
 
 // GetStatus is not supported via the Flow API; MSG91 delivers status via
@@ -301,10 +342,121 @@ func (p *Provider) sendFlow(ctx context.Context, templateID, sender string, msgs
 	return out, nil
 }
 
+// SendOTP sends a one-time password via MSG91's dedicated OTP endpoint.
+//
+// When [gosms.OTPRequest.OTP] is empty, MSG91 generates the code server-side
+// (length controlled by [gosms.OTPRequest.Length], default 4). [gosms.OTPRequest.TemplateID]
+// overrides [Config.TemplateID] for this call; one of the two must be set.
+// [gosms.OTPRequest.Vars] are sent as `extra_param` for templates with
+// placeholders beyond the OTP value itself.
+func (p *Provider) SendOTP(ctx context.Context, req *gosms.OTPRequest) (*gosms.OTPResult, error) {
+	if req == nil || req.Phone == "" {
+		return nil, fmt.Errorf("%w: phone required", gosms.ErrInvalidConfig)
+	}
+
+	templateID := req.TemplateID
+	if templateID == "" {
+		templateID = p.config.TemplateID
+	}
+	if templateID == "" {
+		return nil, fmt.Errorf("%w: template ID required", gosms.ErrInvalidConfig)
+	}
+
+	q := p.otpSendQuery(req, templateID)
+	body, contentType, err := otpVarsBody(req.Vars)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint := p.config.BaseURL + otpSendPath + "?" + q.Encode()
+	otpResp, status, err := p.doOTPRequest(ctx, endpoint, body, contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	if status >= 400 || otpResp.Type != "success" {
+		return nil, parseFlowError(flowResponse(*otpResp))
+	}
+
+	return &gosms.OTPResult{
+		MessageID: otpResp.Message,
+		Phone:     req.Phone,
+		SentAt:    time.Now(),
+		Raw: map[string]any{
+			"type":    otpResp.Type,
+			"message": otpResp.Message,
+		},
+	}, nil
+}
+
+// otpSendQuery builds the query string for the /api/v5/otp send call.
+func (p *Provider) otpSendQuery(req *gosms.OTPRequest, templateID string) url.Values {
+	q := url.Values{}
+	q.Set("template_id", templateID)
+	q.Set("mobile", p.normalizeRecipient(req.Phone))
+	if req.OTP != "" {
+		q.Set("otp", req.OTP)
+	}
+	if req.Length > 0 {
+		q.Set("otp_length", strconv.Itoa(req.Length))
+	}
+	if req.Expiry > 0 {
+		q.Set("otp_expiry", strconv.Itoa(int(req.Expiry.Minutes())))
+	}
+	return q
+}
+
+// otpVarsBody encodes OTPRequest.Vars as a JSON body. Returns nil body and
+// empty content type when there are no variables.
+func otpVarsBody(vars map[string]string) (io.Reader, string, error) {
+	if len(vars) == 0 {
+		return nil, "", nil
+	}
+	b, err := json.Marshal(vars)
+	if err != nil {
+		return nil, "", err
+	}
+	return bytes.NewReader(b), "application/json", nil
+}
+
+// doOTPRequest executes a POST against an MSG91 OTP endpoint and decodes
+// the JSON envelope. Transport-level and decode errors are wrapped with
+// gosms sentinel errors; callers interpret the HTTP status and otpResp.Type
+// to distinguish success from logical errors (bad OTP, wrong authkey, etc).
+func (p *Provider) doOTPRequest(ctx context.Context, endpoint string, body io.Reader, contentType string) (*otpResponse, int, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, body)
+	if err != nil {
+		return nil, 0, err
+	}
+	httpReq.Header.Set("authkey", p.config.AuthKey)
+	if contentType != "" {
+		httpReq.Header.Set("Content-Type", contentType)
+	}
+
+	resp, err := p.config.HTTPClient.Do(httpReq)
+	if err != nil {
+		return nil, 0, fmt.Errorf("%w: %w", gosms.ErrSendFailed, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, resp.StatusCode, err
+	}
+
+	var otpResp otpResponse
+	if err := json.Unmarshal(data, &otpResp); err != nil {
+		if resp.StatusCode >= 400 {
+			return nil, resp.StatusCode, fmt.Errorf("%w: http %d: %s", gosms.ErrProviderError, resp.StatusCode, bodySnippet(data))
+		}
+		return nil, resp.StatusCode, fmt.Errorf("%w: decode response: %w", gosms.ErrProviderError, err)
+	}
+	return &otpResp, resp.StatusCode, nil
+}
+
 // VerifyOTP verifies a one-time password for the given phone number using
-// the MSG91 OTP API. This is a provider-specific method and is not part of
-// the [gosms.Provider] interface.
-func (p *Provider) VerifyOTP(ctx context.Context, phone, otp string) (*VerifyResult, error) {
+// the MSG91 OTP API. It implements [gosms.OTPProvider].
+func (p *Provider) VerifyOTP(ctx context.Context, phone, otp string) (*gosms.VerifyResult, error) {
 	if phone == "" || otp == "" {
 		return nil, fmt.Errorf("%w: phone and otp required", gosms.ErrInvalidConfig)
 	}
@@ -349,7 +501,7 @@ func (p *Provider) VerifyOTP(ctx context.Context, phone, otp string) (*VerifyRes
 		return nil, parseFlowError(flowResponse(otpResp))
 	}
 
-	return &VerifyResult{
+	return &gosms.VerifyResult{
 		Verified: otpResp.Type == "success",
 		Message:  otpResp.Message,
 		Raw: map[string]any{
@@ -372,10 +524,9 @@ func isOTPMismatch(msg string) bool {
 		strings.Contains(lower, "otp has expired")
 }
 
-// RetryOTP requests MSG91 to resend an OTP to the phone number via the
-// given channel ("text" or "voice"). Provider-specific; not on the
-// [gosms.Provider] interface.
-func (p *Provider) RetryOTP(ctx context.Context, phone, channel string) error {
+// ResendOTP asks MSG91 to resend an OTP to the phone number via the
+// given channel ("text" or "voice"). It implements [gosms.OTPProvider].
+func (p *Provider) ResendOTP(ctx context.Context, phone, channel string) error {
 	if phone == "" {
 		return fmt.Errorf("%w: phone required", gosms.ErrInvalidConfig)
 	}
@@ -390,7 +541,7 @@ func (p *Provider) RetryOTP(ctx context.Context, phone, channel string) error {
 	q.Set("mobile", p.normalizeRecipient(phone))
 	q.Set("retrytype", channel)
 
-	endpoint := p.config.BaseURL + otpRetryPath + "?" + q.Encode()
+	endpoint := p.config.BaseURL + otpResendPath + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		return err
@@ -435,18 +586,25 @@ func ParseWebhook(r *http.Request) (*gosms.Status, error) {
 		requestID = r.FormValue("request_id")
 	}
 
+	statusText := r.FormValue("status")
+	statusCode := r.FormValue("statusCode")
+	status := mapStatus(statusText)
+	if status == gosms.StatusUnknown {
+		status = mapStatusCode(statusCode)
+	}
+
 	return &gosms.Status{
 		MessageID:    requestID,
-		Status:       mapStatus(r.FormValue("status")),
+		Status:       status,
 		UpdatedAt:    time.Now(),
-		ErrorCode:    r.FormValue("statusCode"),
+		ErrorCode:    statusCode,
 		ErrorMessage: r.FormValue("description"),
 		Raw: map[string]any{
 			"request_id":  requestID,
 			"mobile":      r.FormValue("mobile"),
-			"status":      r.FormValue("status"),
+			"status":      statusText,
 			"description": r.FormValue("description"),
-			"status_code": r.FormValue("statusCode"),
+			"status_code": statusCode,
 		},
 	}, nil
 }
@@ -473,18 +631,6 @@ func SetTemplateID(msg *gosms.Message, templateID string) *gosms.Message {
 	}
 	msg.Metadata[metaTemplateID] = templateID
 	return msg
-}
-
-// VerifyResult is returned from [Provider.VerifyOTP].
-type VerifyResult struct {
-	// Verified is true when MSG91 confirms the OTP matches.
-	Verified bool
-
-	// Message is the raw MSG91 message string (useful for failure reasons).
-	Message string
-
-	// Raw contains the raw provider response.
-	Raw map[string]any
 }
 
 func (p *Provider) normalizeRecipient(phone string) string {
@@ -581,6 +727,30 @@ func mapStatus(status string) gosms.DeliveryStatus {
 		return gosms.StatusRejected
 	case "expired":
 		return gosms.StatusExpired
+	default:
+		return gosms.StatusUnknown
+	}
+}
+
+// mapStatusCode maps MSG91's numeric DLR status codes, used as a
+// fallback when the textual `status` field is missing or non-standard.
+// Reference: https://docs.msg91.com/reference/delivery-report
+func mapStatusCode(code string) gosms.DeliveryStatus {
+	switch strings.TrimSpace(code) {
+	case "1":
+		return gosms.StatusDelivered
+	case "2", "13":
+		return gosms.StatusFailed
+	case "5":
+		return gosms.StatusQueued
+	case "8":
+		return gosms.StatusSent
+	case "9", "25", "26":
+		return gosms.StatusRejected
+	case "16":
+		return gosms.StatusExpired
+	case "17":
+		return gosms.StatusRejected
 	default:
 		return gosms.StatusUnknown
 	}

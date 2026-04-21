@@ -5,6 +5,7 @@ package gosms
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 )
 
@@ -34,6 +35,92 @@ type Provider interface {
 
 	// Name returns the provider name.
 	Name() string
+}
+
+// WebhookParser is the conventional signature for provider-specific
+// delivery report parsers. Each provider package exposes a package-level
+// ParseWebhook function matching this signature (e.g. [twilio.ParseWebhook],
+// [vonage.ParseWebhook], [msg91.ParseWebhook]), so callers can store or
+// route them generically:
+//
+//	parsers := map[string]gosms.WebhookParser{
+//	    "/webhook/twilio": twilio.ParseWebhook,
+//	    "/webhook/msg91":  msg91.ParseWebhook,
+//	}
+type WebhookParser func(r *http.Request) (*Status, error)
+
+// OTPProvider is an optional capability for providers that expose a
+// dedicated OTP flow (send / verify / resend) rather than requiring
+// callers to assemble OTP messages through the generic SMS path.
+//
+// Providers without native OTP support simply don't implement this
+// interface. Callers detect the capability via a type assertion:
+//
+//	if otp, ok := provider.(gosms.OTPProvider); ok {
+//	    _, err := otp.SendOTP(ctx, &gosms.OTPRequest{Phone: "+919876543210"})
+//	}
+type OTPProvider interface {
+	// SendOTP sends (or asks the provider to generate and send) an OTP.
+	SendOTP(ctx context.Context, req *OTPRequest) (*OTPResult, error)
+
+	// VerifyOTP verifies a code submitted by the recipient.
+	VerifyOTP(ctx context.Context, phone, otp string) (*VerifyResult, error)
+
+	// ResendOTP asks the provider to resend the last OTP via the given
+	// channel (e.g. "text" or "voice"). Channel values are provider-specific.
+	ResendOTP(ctx context.Context, phone, channel string) error
+}
+
+// OTPRequest describes an OTP send via [OTPProvider.SendOTP].
+type OTPRequest struct {
+	// Phone is the recipient phone number (E.164 recommended).
+	Phone string
+
+	// OTP is the code to send. When empty, providers that support
+	// server-side generation will produce one.
+	OTP string
+
+	// Length is the desired OTP length when the provider generates
+	// the code. Ignored when OTP is set. Typical range: 4-9.
+	Length int
+
+	// Expiry is how long the OTP remains valid.
+	Expiry time.Duration
+
+	// TemplateID is the provider template identifier (e.g. a DLT
+	// template ID for MSG91). Overrides any default configured on the
+	// provider.
+	TemplateID string
+
+	// Vars holds template variables beyond the OTP itself.
+	Vars map[string]string
+}
+
+// OTPResult is returned by [OTPProvider.SendOTP].
+type OTPResult struct {
+	// MessageID is the provider's request identifier.
+	MessageID string
+
+	// Phone is the recipient.
+	Phone string
+
+	// SentAt is when the request was accepted.
+	SentAt time.Time
+
+	// Raw contains the raw provider response.
+	Raw map[string]any
+}
+
+// VerifyResult is returned by [OTPProvider.VerifyOTP].
+type VerifyResult struct {
+	// Verified is true when the provider confirms the OTP matches.
+	Verified bool
+
+	// Message is the raw provider message (useful for failure reasons).
+	Message string
+
+	// Raw contains the raw provider response.
+	Raw map[string]any
 }
 
 // Message represents an SMS message.
