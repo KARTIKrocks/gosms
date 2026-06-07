@@ -1,10 +1,27 @@
+GOLANGCI_LINT_VERSION := v2.12.2
+GOIMPORTS_VERSION := v0.45.0
+
 MODULES = . ./twilio ./sns ./vonage ./msg91
 SUB_MODULES = ./twilio ./sns ./vonage ./msg91
 MODULE_PATH = github.com/KARTIKrocks/gosms
 
-.PHONY: all test test-race coverage lint lint-fix fmt vet tidy build bench clean ci release-prep release-local
+.PHONY: all setup test test-race coverage lint lint-fix fix fmt fmt-check vet tidy build bench clean ci release-prep release-local
 
 all: tidy fmt vet lint build test
+
+## CI: run lint and tests with race detector (used in CI pipelines)
+ci: fmt-check vet lint test-race
+
+## Install development tools (skips if already present)
+setup:
+	@command -v golangci-lint >/dev/null 2>&1 || { \
+		echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
+	}
+	@command -v goimports >/dev/null 2>&1 || { \
+		echo "Installing goimports $(GOIMPORTS_VERSION)..."; \
+		go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION); \
+	}
 
 ## Build all modules
 build:
@@ -43,23 +60,31 @@ coverage:
 	@echo "Full report: go tool cover -html=coverage.out"
 
 ## Run linter across all modules
-lint:
+lint: setup
 	@for mod in $(MODULES); do \
 		echo "==> Linting $$mod"; \
 		(cd $$mod && golangci-lint run --timeout=5m ./...) || exit 1; \
 	done
 
 ## Run linter with auto-fix across all modules
-lint-fix:
+lint-fix: setup
 	@for mod in $(MODULES); do \
 		echo "==> Lint-fixing $$mod"; \
 		(cd $$mod && golangci-lint run --fix --timeout=5m ./...) || exit 1; \
 	done
 
+## Fix code formatting and linting issues
+fix: fmt lint-fix
+
 ## Format code
-fmt:
+fmt: setup
 	@gofmt -s -w .
 	@goimports -w .
+
+## Check formatting without modifying files (used in CI)
+fmt-check: setup
+	@test -z "$$(gofmt -s -l . | tee /dev/stderr)" || { echo "Unformatted files found. Run 'make fmt'."; exit 1; }
+	@test -z "$$(goimports -l . | tee /dev/stderr)" || { echo "Unordered imports found. Run 'make fmt'."; exit 1; }
 
 ## Run go vet across all modules
 vet:
@@ -81,9 +106,6 @@ bench:
 		echo "==> Benchmarking $$mod"; \
 		(cd $$mod && go test -bench=. -benchmem ./...) || exit 1; \
 	done
-
-## Run all CI checks
-ci: tidy fmt vet lint test-race
 
 ## Remove build artifacts and coverage files
 clean:
