@@ -3,6 +3,7 @@ package gosms
 import (
 	"context"
 	"regexp"
+	"sync"
 	"sync/atomic"
 	"unicode/utf8"
 )
@@ -193,6 +194,7 @@ type MultiProvider struct {
 	providers []Provider
 	strategy  MultiProviderStrategy
 	counter   atomic.Uint64
+	mu        sync.RWMutex
 }
 
 // MultiProviderStrategy determines how providers are selected.
@@ -215,7 +217,9 @@ func NewMultiProvider(providers ...Provider) *MultiProvider {
 
 // WithStrategy sets the provider selection strategy.
 func (p *MultiProvider) WithStrategy(strategy MultiProviderStrategy) *MultiProvider {
+	p.mu.Lock()
 	p.strategy = strategy
+	p.mu.Unlock()
 	return p
 }
 
@@ -230,7 +234,11 @@ func (p *MultiProvider) Send(ctx context.Context, msg *Message) (*Result, error)
 		return nil, ErrInvalidConfig
 	}
 
-	switch p.strategy {
+	p.mu.RLock()
+	strategy := p.strategy
+	p.mu.RUnlock()
+
+	switch strategy {
 	case StrategyRoundRobin:
 		idx := p.counter.Add(1) - 1
 		provider := p.providers[idx%uint64(len(p.providers))]

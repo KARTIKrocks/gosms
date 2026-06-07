@@ -18,7 +18,6 @@ linters:
     revive:
       rules:
         - name: exported
-          disabled: true
   exclusions:
     paths:
       - "gosms-website/"

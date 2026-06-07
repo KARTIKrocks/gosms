@@ -50,6 +50,8 @@ type Provider struct {
 }
 
 // NewProvider creates a new Twilio provider.
+// It validates the required configuration fields (AccountSID and AuthToken)
+// and returns an error if they are missing.
 func NewProvider(config Config) (*Provider, error) {
 	if config.AccountSID == "" || config.AuthToken == "" {
 		return nil, fmt.Errorf("%w: account SID and auth token required", gosms.ErrInvalidConfig)
@@ -67,11 +69,14 @@ func NewProvider(config Config) (*Provider, error) {
 }
 
 // Name returns the provider name.
+// It always returns "twilio".
 func (p *Provider) Name() string {
 	return "twilio"
 }
 
 // Send sends an SMS message via Twilio.
+// It supports scheduled messages, validity periods, and custom sender IDs.
+// Returns a Result with the message ID and status, or an error if the send fails.
 func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result, error) {
 	endpoint := fmt.Sprintf("%s/Accounts/%s/Messages.json", p.config.BaseURL, p.config.AccountSID)
 
@@ -119,7 +124,11 @@ func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result,
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", gosms.ErrSendFailed, err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
@@ -153,11 +162,13 @@ func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result,
 }
 
 // SendBulk sends multiple SMS messages.
+// It sends each message individually and returns one result per input message.
 func (p *Provider) SendBulk(ctx context.Context, msgs []*gosms.Message) ([]*gosms.Result, error) {
 	return gosms.SendEach(ctx, p.Name(), msgs, p.Send), nil
 }
 
 // GetStatus retrieves the delivery status of a message.
+// It queries Twilio's API for the current status of the message identified by messageID.
 func (p *Provider) GetStatus(ctx context.Context, messageID string) (*gosms.Status, error) {
 	if !messageIDRegex.MatchString(messageID) {
 		return nil, fmt.Errorf("%w: invalid message ID format", gosms.ErrInvalidConfig)
@@ -175,7 +186,11 @@ func (p *Provider) GetStatus(ctx context.Context, messageID string) (*gosms.Stat
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {

@@ -1,5 +1,5 @@
 // Package gosms provides a unified interface for sending SMS messages
-// via multiple providers including Twilio, AWS SNS, and Vonage.
+// via multiple providers including Twilio, AWS SNS, Vonage, and MSG91.
 package gosms
 
 import (
@@ -28,6 +28,7 @@ type Provider interface {
 	Send(ctx context.Context, msg *Message) (*Result, error)
 
 	// SendBulk sends multiple SMS messages.
+	// Returns one *Result per input *Message, in the same order.
 	SendBulk(ctx context.Context, msgs []*Message) ([]*Result, error)
 
 	// GetStatus retrieves the delivery status of a message.
