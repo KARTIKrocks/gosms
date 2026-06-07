@@ -309,7 +309,10 @@ func TestMockProviderLatencyContextCancel(t *testing.T) {
 func TestGenerateID(t *testing.T) {
 	ids := make(map[string]bool)
 	for range 100 {
-		id := generateID()
+		id, err := generateID()
+		if err != nil {
+			t.Fatalf("generateID() error = %v", err)
+		}
 		if ids[id] {
 			t.Fatalf("duplicate ID generated: %s", id)
 		}

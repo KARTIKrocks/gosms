@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-06-07
+
+### Changed
+
+- SNS provider now wraps API errors from `SetSMSAttributes`, `GetSMSAttributes`, `CheckIfPhoneNumberIsOptedOut`, `ListPhoneNumbersOptedOut`, and `OptInPhoneNumber` with `gosms.ErrProviderError` for consistent error handling
+- `MockProvider.Send` now reports a realistic segment count via `CalculateSegments` instead of a hardcoded `1`
+- Re-enabled the `exported` revive linter and documented previously-undocumented exported symbols across the core and provider packages
+
+### Fixed
+
+- `MockProvider` ID generation now surfaces `crypto/rand` read failures instead of silently ignoring them
+- Guarded `MultiProvider` strategy access with a mutex, preventing a data race when `WithStrategy` is called concurrently with `Send`
+- `examples/twilio-provider` no longer reads the delivery status from a `nil` result when a scheduled send fails
+- Example modules (`sns`, `twilio`, `vonage`) now require `gosms@v0.2.0` instead of the stale `v0.1.0`
+- `make release-prep` now validates that `VERSION` starts with `v` and includes the `msg91` tag in its instructions
+
 ## [0.2.0] - 2026-04-21
 
 ### Added

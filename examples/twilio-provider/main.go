@@ -49,12 +49,13 @@ func main() {
 		fmt.Printf("Scheduled send (expected to fail without messaging service): %v\n", err)
 	} else {
 		fmt.Printf("Scheduled: id=%s\n", result.MessageID)
-	}
 
-	// Check delivery status.
-	status, err := client.GetStatus(ctx, result.MessageID)
-	if err != nil {
-		log.Fatal(err)
+		// Check delivery status.
+		messageID := result.MessageID
+		status, err := client.GetStatus(ctx, messageID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Status: %s\n", status.Status)
 	}
-	fmt.Printf("Status: %s\n", status.Status)
 }

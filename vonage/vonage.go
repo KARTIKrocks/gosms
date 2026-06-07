@@ -19,9 +19,12 @@ const defaultBaseURL = "https://rest.nexmo.com"
 type MessageType string
 
 const (
-	TypeText    MessageType = "text"
+	// TypeText is for plain text messages using GSM 7-bit encoding.
+	TypeText MessageType = "text"
+	// TypeUnicode is for messages containing Unicode characters.
 	TypeUnicode MessageType = "unicode"
-	TypeBinary  MessageType = "binary"
+	// TypeBinary is for binary messages.
+	TypeBinary MessageType = "binary"
 )
 
 // Config holds Vonage-specific configuration.
