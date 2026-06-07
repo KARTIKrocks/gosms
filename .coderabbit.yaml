@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit configuration for gosms.
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: "en-US"
+early_access: false
+tone_instructions: >-
+  Be concise and technical. This is a public, production-grade Go SMS library
+  with a stable exported API. Prioritize correctness, backward compatibility,
+  error handling, concurrency safety, and Go idioms over stylistic nits.
+
+reviews:
+  profile: "assertive"
+  # Surface findings as comments rather than blocking; CI (golangci-lint, tests,
+  # CodeQL) is the source of truth for merge gating.
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  poem: true
+  review_status: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  suggested_reviewers: true
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - "main"
+
+  # Don't waste review cycles on generated, vendored, or non-source artifacts.
+  path_filters:
+    - "!**/vendor/**"
+    - "!**/*.sum"
+    - "!**/testdata/**"
+    - "!gosms-website/**"
+    - "!**/*.svg"
+    - "!**/*.png"
+    - "!CHANGELOG.md"
+
+  # Targeted guidance per area of the codebase.
+  path_instructions:
+    - path: "**/*.go"
+      instructions: >-
+        Enforce Go best practices: wrap errors with %w and add context, never
+        ignore returned errors, prefer the standard library, avoid data races,
+        respect context cancellation/timeouts on all network calls, and close
+        response bodies. All exported types, functions, and constants must carry
+        complete doc comments starting with the identifier name. Flag any change
+        to an exported signature as a potential breaking change to the public API.
+    - path: "**/*_test.go"
+      instructions: >-
+        Tests should use table-driven style where it fits, cover error paths and
+        edge cases (empty inputs, invalid phone numbers, network failures), and
+        avoid real network calls — prefer httptest or the package mocks. Doc
+        comments are not required on test helpers.
+    - path: "{twilio,sns,vonage,msg91}/**/*.go"
+      instructions: >-
+        These are independent provider submodules implementing the core Sender
+        interface. Verify the interface contract is honored, provider-specific
+        errors are mapped to the library's error types, credentials/secrets are
+        never logged, and the submodule's go.mod stays consistent with the root
+        module version it depends on.
+    - path: "examples/**"
+      instructions: >-
+        Examples are documentation. Prioritize clarity and correctness over
+        production hardening; relaxed error checking is acceptable here, but the
+        code must compile and demonstrate the intended API usage accurately.
+    - path: ".github/**"
+      instructions: >-
+        Review CI workflows for security: pin third-party actions, scope GITHUB
+        TOKEN permissions to least privilege, and avoid leaking secrets in logs.
+
+  tools:
+    # Surface the same lint findings the project already enforces via .golangci.yml.
+    golangci-lint:
+      enabled: true
+      config_file: ".golangci.yml"
+    # Catch accidentally committed credentials — critical for an SMS provider lib.
+    gitleaks:
+      enabled: true
+    github-checks:
+      enabled: true
+    actionlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+
+  # Validate PRs follow Conventional Commits, matching the repo's commit history.
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: >-
+        PR titles should follow Conventional Commits (e.g. feat:, fix:, deps:,
+        docs:, chore:), optionally scoped by module (e.g. "feat(twilio): ...").
+    description:
+      mode: "warning"
+    docstrings:
+      mode: "warning"
+      threshold: 80
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: "auto"
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "CONTRIBUTING.md"
+      - "CLAUDE.md"
