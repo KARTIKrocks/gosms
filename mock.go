@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
-func generateID() string {
+func generateID() (string, error) {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]), nil
 }
 
 // MockProvider is a mock SMS provider for testing.
@@ -70,7 +72,10 @@ func (p *MockProvider) Send(ctx context.Context, msg *Message) (*Result, error) 
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	messageID := generateID()
+	messageID, err := generateID()
+	if err != nil {
+		return nil, err
+	}
 
 	status := StatusAccepted
 	if p.failAll {
@@ -103,7 +108,7 @@ func (p *MockProvider) Send(ctx context.Context, msg *Message) (*Result, error) 
 		Provider:  p.Name(),
 		Cost:      "0.01",
 		Currency:  "USD",
-		Segments:  1,
+		Segments:  CalculateSegments(msg.Body),
 		SentAt:    time.Now(),
 		Raw:       map[string]any{"mock": true},
 	}, nil

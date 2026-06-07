@@ -187,15 +187,18 @@ func (p *Provider) SetSMSAttributes(ctx context.Context, monthlySpendLimit, deli
 	_, err := p.client.SetSMSAttributes(ctx, &sns.SetSMSAttributesInput{
 		Attributes: attrs,
 	})
+	if err != nil {
+		return fmt.Errorf("%w: %w", gosms.ErrProviderError, err)
+	}
 
-	return err
+	return nil
 }
 
 // GetSMSAttributes retrieves the current SMS attributes for the account.
 func (p *Provider) GetSMSAttributes(ctx context.Context) (map[string]string, error) {
 	output, err := p.client.GetSMSAttributes(ctx, &sns.GetSMSAttributesInput{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", gosms.ErrProviderError, err)
 	}
 
 	return output.Attributes, nil
@@ -207,7 +210,7 @@ func (p *Provider) CheckIfPhoneNumberIsOptedOut(ctx context.Context, phoneNumber
 		PhoneNumber: aws.String(phoneNumber),
 	})
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("%w: %w", gosms.ErrProviderError, err)
 	}
 
 	return output.IsOptedOut, nil
@@ -223,7 +226,7 @@ func (p *Provider) ListPhoneNumbersOptedOut(ctx context.Context) ([]string, erro
 			NextToken: nextToken,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w: %w", gosms.ErrProviderError, err)
 		}
 
 		numbers = append(numbers, output.PhoneNumbers...)
@@ -242,5 +245,8 @@ func (p *Provider) OptInPhoneNumber(ctx context.Context, phoneNumber string) err
 	_, err := p.client.OptInPhoneNumber(ctx, &sns.OptInPhoneNumberInput{
 		PhoneNumber: aws.String(phoneNumber),
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("%w: %w", gosms.ErrProviderError, err)
+	}
+	return nil
 }

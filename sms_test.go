@@ -306,14 +306,15 @@ func TestClientSendBulkAllInvalid(t *testing.T) {
 
 func TestClientSendBulkShortProviderResults(t *testing.T) {
 	ctx := context.Background()
-	mock := NewMockProvider()
-	// Override SendBulk to return fewer results than messages
-	mock.WithSendError(nil)
-	client := NewClient(mock)
+
+	// Create a custom provider that returns fewer results than messages
+	shortProvider := &shortResultProvider{}
+	client := NewClient(shortProvider)
 
 	msgs := []*Message{
 		NewMessage("+15551111111", "ok"),
 		NewMessage("+15552222222", "ok too"),
+		NewMessage("+15553333333", "ok three"),
 	}
 
 	// This should not panic even if provider returns fewer results
@@ -321,9 +322,59 @@ func TestClientSendBulkShortProviderResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SendBulk() error = %v", err)
 	}
-	if len(results) != 2 {
-		t.Fatalf("len(results) = %d, want 2", len(results))
+	if len(results) != 3 {
+		t.Fatalf("len(results) = %d, want 3", len(results))
 	}
+	// First result should be success (from provider)
+	if results[0].Status == StatusFailed {
+		t.Error("results[0] should succeed")
+	}
+	// Second and third should be failed (missing from provider response)
+	if results[1].Status != StatusFailed {
+		t.Errorf("results[1].Status = %q, want %q", results[1].Status, StatusFailed)
+	}
+	if results[2].Status != StatusFailed {
+		t.Errorf("results[2].Status = %q, want %q", results[2].Status, StatusFailed)
+	}
+}
+
+// shortResultProvider is a test provider that returns fewer results than messages
+type shortResultProvider struct{}
+
+func (p *shortResultProvider) Name() string { return "short" }
+
+func (p *shortResultProvider) Send(ctx context.Context, msg *Message) (*Result, error) {
+	return &Result{
+		MessageID: "test-id",
+		To:        msg.To,
+		Status:    StatusAccepted,
+		Provider:  p.Name(),
+		SentAt:    time.Now(),
+	}, nil
+}
+
+func (p *shortResultProvider) SendBulk(ctx context.Context, msgs []*Message) ([]*Result, error) {
+	// Intentionally return only 1 result for multiple messages
+	if len(msgs) == 0 {
+		return []*Result{}, nil
+	}
+	return []*Result{
+		{
+			MessageID: "test-id-1",
+			To:        msgs[0].To,
+			Status:    StatusAccepted,
+			Provider:  p.Name(),
+			SentAt:    time.Now(),
+		},
+	}, nil
+}
+
+func (p *shortResultProvider) GetStatus(ctx context.Context, messageID string) (*Status, error) {
+	return &Status{
+		MessageID: messageID,
+		Status:    StatusUnknown,
+		UpdatedAt: time.Now(),
+	}, nil
 }
 
 func TestClientGetStatus(t *testing.T) {

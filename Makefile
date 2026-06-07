@@ -118,6 +118,7 @@ release-prep:
 ifndef VERSION
 	$(error VERSION is required. Usage: make release-prep VERSION=v0.1.0)
 endif
+	@case "$(VERSION)" in v*) ;; *) echo "ERROR: VERSION must start with 'v' (e.g., v0.1.0)"; exit 1;; esac
 	@for mod in $(SUB_MODULES); do \
 		echo "==> release-prep $$mod"; \
 		(cd $$mod && \
@@ -132,6 +133,7 @@ endif
 	@echo "  git tag twilio/$(VERSION)"
 	@echo "  git tag sns/$(VERSION)"
 	@echo "  git tag vonage/$(VERSION)"
+	@echo "  git tag msg91/$(VERSION)"
 	@echo "  git push origin main --tags"
 
 ## Restore replace directives for local development after a release

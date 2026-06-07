@@ -3,8 +3,8 @@ module github.com/KARTIKrocks/gosms/examples/sns-provider
 go 1.24
 
 require (
-	github.com/KARTIKrocks/gosms v0.1.0
-	github.com/KARTIKrocks/gosms/sns v0.1.0
+	github.com/KARTIKrocks/gosms v0.2.0
+	github.com/KARTIKrocks/gosms/sns v0.2.0
 )
 
 require (
