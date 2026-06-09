@@ -1,5 +1,5 @@
-github.com/KARTIKrocks/gosms v0.2.0 h1:trEHI6zE4ZUPZN0tusXdurplGUBkwBxLKAYafH8RtfI=
-github.com/KARTIKrocks/gosms v0.2.0/go.mod h1:AlFGShdb5X1Sk/onMckHBzEq+WwnIa1wsYQKGkAgSOQ=
+github.com/KARTIKrocks/gosms v0.2.1 h1:7FH4FoDC5N5iPK16o4LhHIW78u103ya74xFnv2ptrJY=
+github.com/KARTIKrocks/gosms v0.2.1/go.mod h1:AlFGShdb5X1Sk/onMckHBzEq+WwnIa1wsYQKGkAgSOQ=
 github.com/aws/aws-sdk-go-v2 v1.42.0 h1:XvXMJTkFQtpBKIWZnmr9ZEOc2InWM2yldjXEJ/bymhA=
 github.com/aws/aws-sdk-go-v2 v1.42.0/go.mod h1:27+ACypSLljLAEKsCYOmrjKh83vuTRkuAe9Uv/3A4bg=
 github.com/aws/aws-sdk-go-v2/config v1.32.24 h1:aEDEj533yGdVvEHfkCY0D/1FbDrjnZr4pIulxRjqpHs=
