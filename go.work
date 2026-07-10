@@ -1,9 +1,29 @@
+// The published modules in this repository, wired together for local
+// development.
+//
+// Each provider `require`s a published version of the root module. Without this
+// workspace they would compile against that published version even here, so a
+// breaking change to the root would pass CI while silently breaking every
+// provider. The workspace overrides that requirement with the working tree.
+//
+// It is committed so CI uses it too, and it is ignored entirely when someone
+// depends on any of these modules. To reproduce a consumer's build, set
+// GOWORK=off.
+//
+// The modules under examples/ are deliberately absent. They are never published
+// or tagged, and they wire themselves to the working tree with their own
+// `replace` directives so each one stays a copy-pasteable, self-contained
+// program. No published module here carries a `replace`.
+//
+// Releasing bumps each provider's `require` to the new root tag; see
+// CONTRIBUTING.md / AGENTS.md.
+
 go 1.24
 
 use (
 	.
-	./twilio
-	./sns
-	./vonage
 	./msg91
+	./sns
+	./twilio
+	./vonage
 )
