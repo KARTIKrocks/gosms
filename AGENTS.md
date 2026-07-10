@@ -75,4 +75,25 @@ The core module (`sms.go`, `helpers.go`, `mock.go`) defines the contract; provid
 
 ## Releasing (per-module tags)
 
-`make release-prep VERSION=vX.Y.Z` strips the local `replace` directives and pins sub-modules to the tagged core version; `make release-local` restores `replace` directives for local development. The prep target prints the exact `git tag` commands (one tag per module).
+Releasing is manual. Tag the root module first and push that tag, then point each
+sub-module at it and tag them in a second commit — a module tag resolves to a
+commit, and the proxy reads *that commit's* `go.mod`, so tagging before the bump
+would publish a provider still requiring the old core.
+
+```bash
+git tag vX.Y.Z && git push origin vX.Y.Z    # root module first
+
+for mod in twilio sns vonage msg91; do
+  (cd "$mod" && go mod edit -require github.com/KARTIKrocks/gosms@vX.Y.Z)
+done
+make tidy && make test
+GOWORK=off make test    # what a consumer actually compiles
+
+git commit -am 'Pin sub-modules to vX.Y.Z'
+for mod in twilio sns vonage msg91; do git tag "$mod/vX.Y.Z"; done
+git push origin main --tags
+```
+
+No published module carries a `replace` directive — the committed `go.work`
+handles local resolution, so there is no strip/restore step to forget. (The
+`examples/` modules do use `replace`; they are never published.)

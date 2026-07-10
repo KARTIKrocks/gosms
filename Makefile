@@ -3,9 +3,8 @@ GOIMPORTS_VERSION := v0.45.0
 
 MODULES = . ./twilio ./sns ./vonage ./msg91
 SUB_MODULES = ./twilio ./sns ./vonage ./msg91
-MODULE_PATH = github.com/KARTIKrocks/gosms
 
-.PHONY: all setup test test-race coverage lint lint-fix fix fmt fmt-check vet tidy build bench clean ci release-prep release-local
+.PHONY: all setup test test-race coverage lint lint-fix fix fmt fmt-check vet tidy build bench clean ci
 
 all: tidy fmt vet lint build test
 
@@ -112,37 +111,3 @@ clean:
 	@rm -f coverage*.out
 	@go clean -cache -testcache
 
-## Prepare sub-modules for release: strip replace directives, set version
-## Usage: make release-prep VERSION=v0.1.0
-release-prep:
-ifndef VERSION
-	$(error VERSION is required. Usage: make release-prep VERSION=v0.1.0)
-endif
-	@case "$(VERSION)" in v*) ;; *) echo "ERROR: VERSION must start with 'v' (e.g., v0.1.0)"; exit 1;; esac
-	@for mod in $(SUB_MODULES); do \
-		echo "==> release-prep $$mod"; \
-		(cd $$mod && \
-		go mod edit -dropreplace $(MODULE_PATH) && \
-		go mod edit -require $(MODULE_PATH)@$(VERSION)); \
-	done
-	@echo ""
-	@echo "Done! Sub-modules now point to $(MODULE_PATH)@$(VERSION)"
-	@echo "Next steps:"
-	@echo "  git add -A && git commit -m 'Prepare release $(VERSION)'"
-	@echo "  git tag $(VERSION)"
-	@echo "  git tag twilio/$(VERSION)"
-	@echo "  git tag sns/$(VERSION)"
-	@echo "  git tag vonage/$(VERSION)"
-	@echo "  git tag msg91/$(VERSION)"
-	@echo "  git push origin main --tags"
-
-## Restore replace directives for local development after a release
-release-local:
-	@for mod in $(SUB_MODULES); do \
-		echo "==> release-local $$mod"; \
-		(cd $$mod && \
-		go mod edit -replace $(MODULE_PATH)=../ && \
-		go mod tidy); \
-	done
-	@echo ""
-	@echo "Done! Sub-modules restored to local replace directives."
