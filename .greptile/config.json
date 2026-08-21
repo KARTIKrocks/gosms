@@ -1,0 +1,58 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style"],
+  "triggerOnUpdates": true,
+  "statusCheck": true,
+  "ignorePatterns": "**/mock_*.go\n**/testdata/**\n**/go.sum\n**/vendor/**\n**/node_modules/**\n**/package-lock.json\ncoverage-*.out\ngosms-website/**",
+  "instructions": "gosms is a unified SMS-sending library for Go (github.com/KARTIKrocks/gosms) supporting Twilio, AWS SNS, Vonage, and MSG91. Every provider implements the core gosms.Provider interface (Send, SendBulk, GetStatus, Name) and optionally OTPProvider or a package-level ParseWebhook, so application code can switch or combine providers (MultiProvider) without changing call sites. This is a Go workspace of five modules: root (github.com/KARTIKrocks/gosms — Provider/OTPProvider interfaces, Message/Result/Status types, sentinel errors, MultiProvider, MockProvider, phone/segment helpers — zero third-party dependencies) plus twilio/, sns/, vonage/, msg91/ as separate modules. Prioritize cross-provider behavioral consistency, correct error-sentinel mapping, and concurrency correctness over style. See AGENTS.md for repo conventions and .greptile/rules.md for pattern rationale and worked examples from real bugs already fixed in this codebase.",
+  "rules": [
+    {
+      "id": "provider-parity",
+      "rule": "A behavioral change to one provider implementation (twilio/twilio.go, sns/sns.go, vonage/vonage.go, msg91/msg91.go) — error mapping, context handling, bulk-send semantics, status/webhook parsing — must be mirrored in the others unless the difference is a genuine provider capability gap (e.g. MSG91-only OTP, SNS-only opt-out management). CHANGELOG 0.2.1 fixed exactly this: SNS was the only provider not wrapping its API errors in ErrProviderError.",
+      "scope": ["*.go", "twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"],
+      "severity": "high"
+    },
+    {
+      "id": "sentinel-error-mapping",
+      "rule": "Provider SDK errors (Twilio API errors, AWS SNS error types, Vonage/MSG91 HTTP error responses) must be wrapped with %w into the shared sentinel errors (ErrInvalidPhone, ErrInvalidMessage, ErrSendFailed, ErrProviderError, ErrRateLimited, ErrInsufficientFunds, ErrBlacklisted, ErrUnsupported) so callers can use errors.Is — never returned raw or matched by string.",
+      "scope": ["**/*.go"],
+      "severity": "high"
+    },
+    {
+      "id": "concurrent-mutation-guard",
+      "rule": "Any field read on a Send/SendBulk hot path (e.g. MultiProvider.strategy) must be guarded by the same lock its setter uses — a setter taking a mutex while the read path doesn't is still a data race. MultiProvider.WithStrategy vs Send was exactly this bug (fixed by guarding strategy with a mutex); apply the same scrutiny to any new mutable provider or client state.",
+      "scope": ["*.go", "twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"],
+      "severity": "high"
+    },
+    {
+      "id": "crypto-rand-error-propagation",
+      "rule": "A read from crypto/rand (ID generation, nonce/token generation) must check and propagate its error, never proceed with a partially-filled or zero buffer. MockProvider's generateID silently ignoring a rand.Read failure was a real bug fixed in this codebase; treat any new crypto/rand.Read the same way.",
+      "scope": ["**/*.go"],
+      "severity": "medium"
+    },
+    {
+      "id": "root-module-dependency-purity",
+      "rule": "The root module (files directly in the repository root: sms.go, helpers.go, mock.go) must have zero third-party dependencies per AGENTS.md. A new dependency belongs in a provider module (twilio/, sns/, vonage/, msg91/), never in root go.mod.",
+      "scope": ["*.go", "go.mod"],
+      "severity": "high"
+    },
+    {
+      "id": "shared-helper-reuse",
+      "rule": "Phone validation/normalization (ValidateE164, NormalizePhone) and segment counting (CalculateSegments, IsGSMEncoding, GSMLen) are provider-agnostic helpers in helpers.go. A provider must not reimplement its own phone-format check or segment/cost math — divergent logic there silently changes delivery behavior or cost estimates between providers for the same input.",
+      "scope": ["twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"],
+      "severity": "medium"
+    },
+    {
+      "id": "webhook-parser-contract",
+      "rule": "A provider's package-level ParseWebhook must match the gosms.WebhookParser signature (func(*http.Request) (*Status, error)) and degrade gracefully on malformed or missing provider fields (see msg91.ParseWebhook's fallback to a numeric statusCode) rather than panicking or returning an unhelpful opaque error.",
+      "scope": ["twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"],
+      "severity": "medium"
+    },
+    {
+      "id": "go-exported-docs",
+      "rule": "Every new or newly-exported type, function, method, and constant must have a doc comment that starts with the identifier's own name.",
+      "scope": ["**/*.go"],
+      "severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "Repository conventions: multi-module workspace layout, build/test/lint commands, Provider/Client/MultiProvider architecture, per-module release/tagging process."
+    },
+    {
+      "path": "doc.go",
+      "description": "Package-level overview and usage patterns for the Provider/Client API."
+    },
+    {
+      "path": "sms.go",
+      "description": "The Provider and OTPProvider interfaces, WebhookParser signature, Message/Result/Status/DeliveryStatus shapes, sentinel errors, and Client every provider module implements against.",
+      "scope": ["twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"]
+    },
+    {
+      "path": "helpers.go",
+      "description": "Provider-agnostic phone validation/normalization (ValidateE164, NormalizePhone) and segment counting (CalculateSegments) that providers should reuse rather than reimplement.",
+      "scope": ["twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"]
+    },
+    {
+      "path": ".golangci.yml",
+      "description": "The linter ruleset already enforced in CI; avoid duplicating what golangci-lint already flags."
+    }
+  ]
+}
