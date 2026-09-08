@@ -12,6 +12,7 @@
 //   - github.com/KARTIKrocks/gosms/twilio   — Twilio provider
 //   - github.com/KARTIKrocks/gosms/sns      — AWS SNS provider
 //   - github.com/KARTIKrocks/gosms/vonage   — Vonage (Nexmo) provider
+//   - github.com/KARTIKrocks/gosms/msg91    — MSG91 provider
 //
 // # Quick Start
 //

@@ -1,7 +1,6 @@
 # gosms
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/KARTIKrocks/gosms.svg)](https://pkg.go.dev/github.com/KARTIKrocks/gosms)
-[![Go Report Card](https://goreportcard.com/badge/github.com/KARTIKrocks/gosms)](https://goreportcard.com/report/github.com/KARTIKrocks/gosms)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/KARTIKrocks/gosms)](go.mod)
 [![CI](https://github.com/KARTIKrocks/gosms/actions/workflows/ci.yml/badge.svg)](https://github.com/KARTIKrocks/gosms/actions/workflows/ci.yml)
 [![GitHub tag](https://img.shields.io/github/v/tag/KARTIKrocks/gosms)](https://github.com/KARTIKrocks/gosms/releases)

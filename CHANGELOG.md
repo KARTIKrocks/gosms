@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-08
+
+### Changed
+
+- **Minimum Go version is now 1.27** (was 1.24), across the core module, every provider module, and the examples. Consumers must build with Go 1.27 or newer.
+- Time-dependent `MockProvider` latency tests now use `testing/synctest`, so they run deterministically with a fake clock instead of sleeping in real time.
+- Expanded `.golangci.yml` with security (`gosec`), error-handling (`errorlint`, `errname`, `nilerr`, `nilnesserr`), context/concurrency (`contextcheck`, `fatcontext`, `noctx`, `bodyclose`, `durationcheck`), and modernization (`perfsprint`, `usestdlibvars`, `intrange`, `copyloopvar`, …) linters; bumped `golangci-lint` to v2.13.0 and `goimports` to v0.49.0.
+- CI and CodeQL workflows now build and test against Go 1.27.
+- Tidied the `examples/` modules: `go mod tidy` refreshed their indirect dependencies (notably the AWS SDK in `examples/sns-provider`), and the `replace`-redirected `require` directives on the local modules were normalized to a single consistent version.
+
+### Added
+
+- Greptile code-review configuration under `.greptile/` (root `config.json`, `rules.md`, `files.json`) with a relaxed `examples/` override.
+
+### Removed
+
+- Go Report Card badge from the README — the service is no longer operational.
+
+### Fixed
+
+- `doc.go` package overview now lists the MSG91 provider alongside Twilio, SNS, and Vonage.
+
 ## [0.2.1] - 2026-06-07
 
 ### Changed

@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "Architecture, multi-module layout, the Provider/Client contract, optional capability interfaces, conventions, and the per-module release process."
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "description": "Contribution workflow, prerequisites, and how go.work wires the modules together for local development."
+    },
+    {
+      "path": "sms.go",
+      "description": "Core contract: the Provider interface, Client, the sentinel error set, the DeliveryStatus enum, and the WebhookParser func type that providers implement."
+    },
+    {
+      "path": "helpers.go",
+      "description": "Provider-agnostic helpers: E.164 validation/normalization, GSM 03.38 vs UCS-2 segment counting, MultiProvider, and message constructors."
+    }
+  ]
+}
