@@ -638,7 +638,7 @@ func (p *Provider) normalizeRecipient(phone string) string {
 	phone = strings.TrimPrefix(phone, "+")
 
 	digits := make([]byte, 0, len(phone))
-	for i := 0; i < len(phone); i++ {
+	for i := range len(phone) {
 		c := phone[i]
 		if c >= '0' && c <= '9' {
 			digits = append(digits, c)

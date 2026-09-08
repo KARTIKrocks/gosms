@@ -29,7 +29,7 @@ func writePublishResponse(w http.ResponseWriter, messageID string) {
 	resp := publishResponse{}
 	resp.PublishResult.MessageId = messageID
 	w.Header().Set("Content-Type", "text/xml")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	xml.NewEncoder(w).Encode(resp)
 }
 
@@ -96,7 +96,7 @@ func TestSendSuccess(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		bodyStr := string(body)
 
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
 

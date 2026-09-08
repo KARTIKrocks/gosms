@@ -1,5 +1,5 @@
-GOLANGCI_LINT_VERSION := v2.12.2
-GOIMPORTS_VERSION := v0.45.0
+GOLANGCI_LINT_VERSION := v2.13.0
+GOIMPORTS_VERSION := v0.49.0
 
 MODULES = . ./twilio ./sns ./vonage ./msg91
 SUB_MODULES = ./twilio ./sns ./vonage ./msg91

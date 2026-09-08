@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -109,10 +110,10 @@ func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result,
 
 	if msg.ValidityPeriod > 0 {
 		seconds := min(int(msg.ValidityPeriod.Seconds()), 14400)
-		data.Set("ValidityPeriod", fmt.Sprintf("%d", seconds))
+		data.Set("ValidityPeriod", strconv.Itoa(seconds))
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +172,7 @@ func (p *Provider) GetStatus(ctx context.Context, messageID string) (*gosms.Stat
 	}
 	endpoint := fmt.Sprintf("%s/Accounts/%s/Messages/%s.json", p.config.BaseURL, p.config.AccountSID, messageID)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +272,7 @@ func formatErrorCode(code int) string {
 	if code == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%d", code)
+	return strconv.Itoa(code)
 }
 
 func parseError(resp messageResponse) error {

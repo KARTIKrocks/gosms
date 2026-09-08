@@ -1,5 +1,11 @@
 version: "2"
 
+# Report every occurrence. The defaults (max-same-issues: 3) hide duplicates,
+# which makes a lint failure look smaller than it really is.
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
 linters:
   enable:
     - errcheck
@@ -12,12 +18,48 @@ linters:
     - gocyclo
     - revive
     - prealloc
+    # Security scanning matters for a library that builds requests to third-party
+    # SMS APIs and handles credentials.
+    - gosec
+    # Error-handling discipline: %w-wrapped errors must be compared with
+    # errors.Is/As, and the sentinel errors in sms.go must stay named Err*.
+    - errorlint
+    - errname
+    - nilerr
+    - nilnesserr
+    # Concurrency and context correctness — every provider is documented as safe
+    # for concurrent use and every network call must respect context.
+    - contextcheck
+    - fatcontext
+    - noctx
+    - bodyclose
+    - durationcheck
+    # Prefer the standard library's typed helpers and cheaper conversions.
+    - perfsprint
+    - makezero
+    - wastedassign
+    - unconvert
+    - usestdlibvars
+    # Correctness footguns.
+    - asasalint
+    - reassign
+    - copyloopvar
+    - intrange
+    # Keep //nolint directives specific and explained.
+    - nolintlint
   settings:
     gocyclo:
       min-complexity: 15
     revive:
       rules:
+        # All exported identifiers must carry a doc comment (see AGENTS.md).
         - name: exported
+    errcheck:
+      # An unchecked type assertion panics; deliberate `_ =` discards still pass.
+      check-type-assertions: true
+    nolintlint:
+      require-explanation: true
+      require-specific: true
   exclusions:
     paths:
       - "gosms-website/"
@@ -28,11 +70,27 @@ linters:
       - linters:
           - errcheck
         path: examples/
+      # Tests may assert on unwrapped errors, ignore teardown errors, skip
+      # response-body cleanup, and build requests without a context; none of
+      # that ships to consumers.
+      - linters:
+          - bodyclose
+          - errorlint
+          - gosec
+          - noctx
+          - perfsprint
+        path: _test\.go
+      # Examples are documentation: relaxed error checking and non-hardened code
+      # is acceptable and keeps them readable.
+      - linters:
+          - gosec
+          - perfsprint
+        path: examples/
 
 formatters:
   enable:
     - gofmt
     - goimports
   settings:
-      gofmt:
-        simplify: true
+    gofmt:
+      simplify: true

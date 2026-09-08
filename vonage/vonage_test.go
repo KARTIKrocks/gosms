@@ -58,7 +58,7 @@ func TestNewProviderDefaults(t *testing.T) {
 
 func TestSendSuccess(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
 		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
@@ -304,7 +304,7 @@ func TestParseErrorCodes(t *testing.T) {
 }
 
 func TestParseWebhookGET(t *testing.T) {
-	r := httptest.NewRequest("GET", "/webhook?messageId=msg-001&status=delivered&err-code=0&msisdn=15551234567&to=15550000000&network-code=12345&price=0.05", nil)
+	r := httptest.NewRequest(http.MethodGet, "/webhook?messageId=msg-001&status=delivered&err-code=0&msisdn=15551234567&to=15550000000&network-code=12345&price=0.05", nil)
 
 	status, err := ParseWebhook(r)
 	if err != nil {
@@ -321,7 +321,7 @@ func TestParseWebhookGET(t *testing.T) {
 func TestParseWebhookPOST(t *testing.T) {
 	dlr := `{"messageId":"msg-002","status":"delivered","msisdn":"15551234567","to":"15550000000","network-code":"12345","price":"0.05","scts":"2024010112","err-code":"0","message-timestamp":"2024-01-01 12:00:00"}`
 
-	r := httptest.NewRequest("POST", "/webhook", strings.NewReader(dlr))
+	r := httptest.NewRequest(http.MethodPost, "/webhook", strings.NewReader(dlr))
 	r.Header.Set("Content-Type", "application/json")
 
 	status, err := ParseWebhook(r)
@@ -340,7 +340,7 @@ func TestParseWebhookPOST(t *testing.T) {
 }
 
 func TestParseWebhookPOSTInvalidJSON(t *testing.T) {
-	r := httptest.NewRequest("POST", "/webhook?messageId=msg-003&status=failed", strings.NewReader("not json"))
+	r := httptest.NewRequest(http.MethodPost, "/webhook?messageId=msg-003&status=failed", strings.NewReader("not json"))
 	r.Header.Set("Content-Type", "application/json")
 
 	_, err := ParseWebhook(r)
