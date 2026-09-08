@@ -18,7 +18,7 @@
 // Releasing bumps each provider's `require` to the new root tag; see
 // CONTRIBUTING.md / AGENTS.md.
 
-go 1.24
+go 1.27
 
 use (
 	.
