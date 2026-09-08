@@ -1,0 +1,12 @@
+{
+  "strictness": 3,
+  "rules": [
+    {
+      "id": "examples-are-documentation",
+      "severity": "medium",
+      "scope": ["examples/**"],
+      "rule": "Everything under examples/ is documentation. Prioritize clarity and correct, copy-pasteable API usage over production hardening — relaxed error checking is acceptable. Still require: the code compiles, imports the provider by its real module path, and demonstrates the intended API accurately. Do not flag missing error wrapping, context plumbing, or lint-style nits here."
+    }
+  ],
+  "disabledRules": ["go-error-wrapping", "go-context-and-bodies", "core-no-third-party-deps", "concurrency-safety"]
+}

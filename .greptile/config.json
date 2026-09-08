@@ -1,0 +1,67 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style"],
+  "instructions": "gosms is a public, production-grade Go SMS library with a stable exported API. The core module (github.com/KARTIKrocks/gosms) has zero third-party dependencies; each provider (twilio, sns, vonage, msg91) is its own Go module that implements the core Provider interface. Prioritize correctness, backward compatibility of every exported identifier, error handling, concurrency safety, context propagation, and Go idioms over stylistic nits. golangci-lint v2, `go test -race`, and CodeQL are the merge gate — surface findings as review comments, not blockers.",
+  "ignorePatterns": "gosms-website/**\n**/vendor/**\n**/testdata/**\n**/*.sum\ngo.work\ngo.work.sum\n**/*.svg\n**/*.png\nCHANGELOG.md\nLICENSE",
+  "excludeAuthors": ["dependabot[bot]", "github-actions[bot]"],
+  "includeBranches": ["main"],
+  "triggerOnUpdates": true,
+  "statusCheck": false,
+  "includeConfidenceScore": true,
+  "rules": [
+    {
+      "id": "go-error-wrapping",
+      "severity": "high",
+      "scope": ["**/*.go"],
+      "rule": "Wrap errors with %w and add context; never discard a returned error. Provider errors must be wrapped to the sentinel errors defined in sms.go (ErrInvalidPhone, ErrRateLimited, ErrProviderError, etc.) so callers can match them with errors.Is. Do not invent new error styles — extend the existing sentinel set."
+    },
+    {
+      "id": "go-context-and-bodies",
+      "severity": "high",
+      "scope": ["**/*.go"],
+      "rule": "Every network call must accept a context.Context and respect its cancellation and deadline. HTTP response bodies must always be closed. Never pass context.Background() or context.TODO() down a call path that already has a context."
+    },
+    {
+      "id": "exported-doc-comments",
+      "severity": "medium",
+      "scope": ["**/*.go"],
+      "rule": "Every exported type, function, method, constant, and variable must have a complete doc comment that starts with the identifier's name (enforced by the revive `exported` rule)."
+    },
+    {
+      "id": "api-breaking-change",
+      "severity": "high",
+      "scope": ["*.go", "twilio/**/*.go", "sns/**/*.go", "vonage/**/*.go", "msg91/**/*.go"],
+      "rule": "Flag any change to an exported signature, interface, struct field, method set, or sentinel error value as a potential breaking change to the public API. A change to a core type usually requires matching updates in every provider module; call out when a PR changes core without touching the providers."
+    },
+    {
+      "id": "concurrency-safety",
+      "severity": "high",
+      "scope": ["**/*.go"],
+      "rule": "Client, MockProvider, MultiProvider, and every provider are documented as safe for concurrent use. Preserve that: guard shared state with the existing mutexes, use atomics where the current code does (e.g. MultiProvider round-robin), and never introduce a data race. New concurrent behavior needs a `-race` test."
+    },
+    {
+      "id": "no-secret-logging",
+      "severity": "critical",
+      "scope": ["**/*.go"],
+      "rule": "Never log or embed credentials, API keys, auth tokens, or full recipient phone numbers in error messages, panics, or logs. Provider constructors receive secrets; keep them out of everything a caller or a log aggregator can see."
+    },
+    {
+      "id": "core-no-third-party-deps",
+      "severity": "high",
+      "scope": ["*.go", "go.mod"],
+      "rule": "The root module must have no third-party dependencies. Reject any import outside the standard library in the core package, and any new `require` (other than the Go toolchain) in the root go.mod."
+    },
+    {
+      "id": "provider-module-consistency",
+      "severity": "medium",
+      "scope": ["twilio/**", "sns/**", "vonage/**", "msg91/**"],
+      "rule": "Each provider submodule has its own go.mod that `require`s the core module. Keep the `go` directive aligned with the rest of the repo and do not add a `replace` directive to a published module — local resolution is handled by the committed go.work. Provider-specific API errors must be mapped to the core error types."
+    },
+    {
+      "id": "table-driven-tests",
+      "severity": "low",
+      "scope": ["**/*_test.go"],
+      "rule": "Prefer table-driven tests. Cover error paths and edge cases: empty input, invalid or non-E.164 numbers, provider failures, and context cancellation. No real network calls — use httptest or the package mocks. Time-dependent tests should use testing/synctest rather than real sleeps."
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -270,40 +271,45 @@ func TestMockProviderFindMessageByID(t *testing.T) {
 }
 
 func TestMockProviderLatency(t *testing.T) {
-	ctx := context.Background()
-	mock := NewMockProvider().WithLatency(10 * time.Millisecond)
+	// synctest gives the bubble a fake clock, so the configured latency is
+	// observed exactly and the test spends no real time asleep.
+	synctest.Test(t, func(t *testing.T) {
+		mock := NewMockProvider().WithLatency(10 * time.Millisecond)
 
-	start := time.Now()
-	_, err := mock.Send(ctx, NewMessage("+15551234567", "hello"))
-	elapsed := time.Since(start)
+		start := time.Now()
+		_, err := mock.Send(context.Background(), NewMessage("+15551234567", "hello"))
+		elapsed := time.Since(start)
 
-	if err != nil {
-		t.Fatalf("Send() error = %v", err)
-	}
-	if elapsed < 10*time.Millisecond {
-		t.Errorf("elapsed = %v, expected >= 10ms", elapsed)
-	}
+		if err != nil {
+			t.Fatalf("Send() error = %v", err)
+		}
+		if elapsed != 10*time.Millisecond {
+			t.Errorf("elapsed = %v, want exactly 10ms", elapsed)
+		}
+	})
 }
 
 func TestMockProviderLatencyContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	mock := NewMockProvider().WithLatency(5 * time.Second)
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		mock := NewMockProvider().WithLatency(5 * time.Second)
 
-	go func() {
-		time.Sleep(20 * time.Millisecond)
-		cancel()
-	}()
+		go func() {
+			time.Sleep(20 * time.Millisecond)
+			cancel()
+		}()
 
-	start := time.Now()
-	_, err := mock.Send(ctx, NewMessage("+15551234567", "hello"))
-	elapsed := time.Since(start)
+		start := time.Now()
+		_, err := mock.Send(ctx, NewMessage("+15551234567", "hello"))
+		elapsed := time.Since(start)
 
-	if err != context.Canceled {
-		t.Errorf("error = %v, want context.Canceled", err)
-	}
-	if elapsed >= 1*time.Second {
-		t.Errorf("elapsed = %v, should have cancelled quickly", elapsed)
-	}
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("error = %v, want context.Canceled", err)
+		}
+		if elapsed != 20*time.Millisecond {
+			t.Errorf("elapsed = %v, want the cancel to land at 20ms", elapsed)
+		}
+	})
 }
 
 func TestGenerateID(t *testing.T) {

@@ -90,7 +90,7 @@ func (p *Provider) Name() string {
 
 // Send sends an SMS message via Vonage.
 func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result, error) {
-	endpoint := fmt.Sprintf("%s/sms/json", p.config.BaseURL)
+	endpoint := p.config.BaseURL + "/sms/json"
 
 	from := msg.From
 	if from == "" {
@@ -125,12 +125,14 @@ func (p *Provider) Send(ctx context.Context, msg *gosms.Message) (*gosms.Result,
 		reqBody.ClientRef = msg.Reference
 	}
 
-	jsonBody, err := json.Marshal(reqBody)
+	// G117: Vonage's REST API authenticates via api_key/api_secret carried in
+	// the JSON request body, so serializing them here is required by design.
+	jsonBody, err := json.Marshal(reqBody) //nolint:gosec // see comment above
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, err
 	}

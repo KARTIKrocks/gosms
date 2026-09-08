@@ -209,7 +209,7 @@ func TestSendErrorMapping(t *testing.T) {
 
 func TestSendHTTPError(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(flowResponse{Type: "error", Message: "Invalid authkey"})
 	})
 	defer srv.Close()
@@ -222,7 +222,7 @@ func TestSendHTTPError(t *testing.T) {
 
 func TestSendHTTPErrorNonJSON(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(502)
+		w.WriteHeader(http.StatusBadGateway)
 		_, _ = w.Write([]byte("<html>Bad Gateway</html>"))
 	})
 	defer srv.Close()
@@ -319,7 +319,7 @@ func TestSendBulkGroupErrorIsolated(t *testing.T) {
 		var fr flowRequest
 		_ = json.Unmarshal(body, &fr)
 		if fr.TemplateID == "tmpl_bad" {
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(flowResponse{Type: "error", Message: "Insufficient balance"})
 			return
 		}
@@ -597,7 +597,7 @@ func TestSendOTPRequiresTemplate(t *testing.T) {
 
 func TestSendOTPProviderError(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(401)
+		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "Invalid authkey"})
 	})
 	defer srv.Close()
@@ -652,7 +652,7 @@ func TestVerifyOTPFailure(t *testing.T) {
 
 func TestVerifyOTPHTTPAuthErrorReturnsError(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(401)
+		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "Invalid authkey"})
 	})
 	defer srv.Close()
@@ -668,7 +668,7 @@ func TestVerifyOTPHTTPAuthErrorReturnsError(t *testing.T) {
 
 func TestVerifyOTPMismatchOn400ReturnsVerifiedFalse(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "OTP not match"})
 	})
 	defer srv.Close()
@@ -684,7 +684,7 @@ func TestVerifyOTPMismatchOn400ReturnsVerifiedFalse(t *testing.T) {
 
 func TestVerifyOTPNonJSONError(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(503)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write([]byte("<html>Service Unavailable</html>"))
 	})
 	defer srv.Close()
@@ -761,7 +761,7 @@ func TestResendOTPProviderError(t *testing.T) {
 
 func TestResendOTPAuthErrorMapsToConfig(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(401)
+		w.WriteHeader(http.StatusUnauthorized)
 		_ = json.NewEncoder(w).Encode(otpResponse{Type: "error", Message: "Invalid authkey"})
 	})
 	defer srv.Close()

@@ -15,7 +15,7 @@ Thanks for your interest in contributing!
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.27+
 - golangci-lint v2
 
 ### Running Tests
@@ -25,7 +25,7 @@ make test        # run tests
 make test-race   # run tests with race detector
 make bench       # run benchmarks
 make lint        # run linter
-make ci          # run all checks (tidy, fmt, vet, lint, test-race)
+make ci          # run all checks (fmt-check, vet, lint, test-race)
 ```
 
 ### Code Style

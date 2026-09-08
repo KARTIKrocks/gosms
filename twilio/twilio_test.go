@@ -44,7 +44,7 @@ func TestNewProviderValidation(t *testing.T) {
 
 func TestSendSuccess(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
 
@@ -139,7 +139,7 @@ func TestSendMessagingServiceSID(t *testing.T) {
 
 func TestSendHTTPError(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		resp := messageResponse{Code: 21211, Message: "Invalid 'To' Phone Number"}
 		json.NewEncoder(w).Encode(resp)
 	})
@@ -193,7 +193,7 @@ func TestGetStatusInvalidID(t *testing.T) {
 
 func TestGetStatusSuccess(t *testing.T) {
 	srv, p := newTestServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
+		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
 		resp := messageResponse{
@@ -300,12 +300,12 @@ func TestFormatErrorCode(t *testing.T) {
 
 func TestParseWebhook(t *testing.T) {
 	form := "MessageSid=SM_test&MessageStatus=delivered&ErrorCode=&ErrorMessage=&AccountSid=AC_test&From=%2B15550000000&To=%2B15551234567"
-	r := httptest.NewRequest("POST", "/webhook", nil)
+	r := httptest.NewRequest(http.MethodPost, "/webhook", nil)
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.Body = http.NoBody
 	r.Form = nil
 	// Use a proper form request
-	r = httptest.NewRequest("POST", "/webhook?"+form, nil)
+	r = httptest.NewRequest(http.MethodPost, "/webhook?"+form, nil)
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	status, err := ParseWebhook(r)
