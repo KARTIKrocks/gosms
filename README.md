@@ -1,19 +1,56 @@
-# gosms
+<!-- The centred logo block opens the file, so there is no h1 on line 1. -->
+<!-- markdownlint-disable-next-line MD041 -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="website/static/img/logo-dark.svg">
+    <img src="website/static/img/logo.svg" alt="gosms" width="96" height="96">
+  </picture>
+</p>
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/KARTIKrocks/gosms.svg)](https://pkg.go.dev/github.com/KARTIKrocks/gosms)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/KARTIKrocks/gosms)](go.mod)
-[![CI](https://github.com/KARTIKrocks/gosms/actions/workflows/ci.yml/badge.svg)](https://github.com/KARTIKrocks/gosms/actions/workflows/ci.yml)
-[![GitHub tag](https://img.shields.io/github/v/tag/KARTIKrocks/gosms)](https://github.com/KARTIKrocks/gosms/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![codecov](https://codecov.io/gh/KARTIKrocks/gosms/branch/main/graph/badge.svg)](https://codecov.io/gh/KARTIKrocks/gosms)
+<h1 align="center">gosms</h1>
 
-A unified SMS sending library for Go with support for multiple providers including Twilio, AWS SNS, Vonage, and MSG91.
+<p align="center">
+  A unified SMS-sending library for Go, with support for Twilio, AWS SNS,
+  Vonage, and MSG91 — each provider its own Go module.
+</p>
 
-Each provider is a **separate Go module**, so you only download the dependencies you actually need.
+<p align="center">
+  <a href="https://pkg.go.dev/github.com/KARTIKrocks/gosms"><img src="https://pkg.go.dev/badge/github.com/KARTIKrocks/gosms.svg" alt="Go Reference"></a>
+  <a href="https://github.com/KARTIKrocks/gosms/releases"><img src="https://img.shields.io/github/v/tag/KARTIKrocks/gosms" alt="GitHub tag"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/KARTIKrocks/gosms" alt="Go Version"></a>
+  <a href="https://github.com/KARTIKrocks/gosms/actions/workflows/ci.yml"><img src="https://github.com/KARTIKrocks/gosms/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://codecov.io/gh/KARTIKrocks/gosms"><img src="https://codecov.io/gh/KARTIKrocks/gosms/branch/main/graph/badge.svg" alt="codecov"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <b><a href="https://kartikrocks.github.io/gosms/">Documentation</a></b> ·
+  <b><a href="https://pkg.go.dev/github.com/KARTIKrocks/gosms">API Reference</a></b> ·
+  <b><a href="CHANGELOG.md">Changelog</a></b>
+</p>
+
+## Why gosms?
+
+Every provider ships its own SDK with its own request shape, its own error
+strings, and its own webhook format. gosms gives every one of them the same
+`Provider` interface, so an application sends a message the same way
+regardless of which backend is behind it — and keeps each provider in its own
+Go module, so switching (or supporting more than one) doesn't drag in
+dependencies you don't use.
+
+| Capability | gosms | Provider SDK directly |
+| --- | --- | --- |
+| One interface across Twilio, SNS, Vonage, and MSG91 | ✓ | You build it |
+| Only pull the dependencies for providers you use | ✓ | N/A |
+| Delivery status polling + webhook parsing | ✓ | You build it |
+| Fallback and round-robin across providers | ✓ | You build it |
+| E.164 validation, normalization, segment counting | ✓ | You build it |
+| DLT template variables and OTP flow (MSG91) | ✓ | You build it |
+| Mock provider with failure/latency injection | ✓ | You build it |
 
 ## Installation
 
-Install only what you need:
+Install the core module plus whichever providers you need:
 
 ```bash
 # Core (required)
@@ -27,8 +64,6 @@ go get github.com/KARTIKrocks/gosms/msg91
 ```
 
 ## Quick Start
-
-### Twilio
 
 ```go
 import (
@@ -55,124 +90,11 @@ if err != nil {
 log.Printf("Message sent: %s, Status: %s", result.MessageID, result.Status)
 ```
 
-### AWS SNS
-
-```go
-import (
-    "github.com/KARTIKrocks/gosms"
-    "github.com/KARTIKrocks/gosms/sns"
-)
-
-config := sns.DefaultConfig()
-config.Region = "us-east-1"
-config.AccessKeyID = "access_key"
-config.SecretAccessKey = "secret_key"
-config.SenderID = "MyApp"
-config.SMSType = sns.SMSTransactional
-
-provider, err := sns.NewProvider(ctx, config)
-if err != nil {
-    log.Fatal(err)
-}
-
-client := gosms.NewClient(provider)
-result, err := client.Send(ctx, "+15559876543", "Your code is 123456")
-```
-
-### Vonage
-
-```go
-import (
-    "github.com/KARTIKrocks/gosms"
-    "github.com/KARTIKrocks/gosms/vonage"
-)
-
-provider, err := vonage.NewProvider(vonage.Config{
-    APIKey:    "api_key",
-    APISecret: "api_secret",
-    From:      "MyApp",
-})
-if err != nil {
-    log.Fatal(err)
-}
-
-client := gosms.NewClient(provider)
-result, err := client.Send(ctx, "+15559876543", "Hello from Vonage!")
-```
-
-### MSG91
-
-MSG91 is the standard SMS gateway for India. It uses DLT-approved Flow templates;
-variables are passed via `msg91.SetVar`, not the `Body` field.
-
-```go
-import (
-    "github.com/KARTIKrocks/gosms"
-    "github.com/KARTIKrocks/gosms/msg91"
-)
-
-provider, err := msg91.NewProvider(msg91.Config{
-    AuthKey:    "your_authkey",
-    SenderID:   "SENDER",         // 6-char DLT sender ID
-    TemplateID: "tmpl_xxx",       // DLT-approved Flow template
-    Route:      msg91.RouteTransactional,
-})
-if err != nil {
-    log.Fatal(err)
-}
-
-client := gosms.NewClient(provider)
-
-msg := gosms.NewMessage("+919876543210", "")
-msg91.SetVar(msg, "name", "Kartik")
-msg91.SetVar(msg, "otp", "1234")
-
-result, err := client.SendMessage(ctx, msg)
-```
-
-**Template variables and `Body` fallback.** MSG91 Flow templates reference
-placeholders like `##name##` or `##otp##`. Set each one with `msg91.SetVar`.
-For templates with a single `##body##` placeholder, any non-empty `Message.Body`
-is automatically passed as `body` when no vars are set — so the unified
-`client.Send(ctx, to, text)` path works without extra wiring.
-
-**Per-message overrides.** Use `msg91.SetTemplateID(msg, "tmpl_other")` to
-override `Config.TemplateID` for a single message, or `msg.WithFrom("OTHER")`
-to override the sender ID.
-
-**Phone normalization.** Non-E.164 numbers up to 10 digits are prefixed with
-`Config.Country` (default `91`). `+919876543210`, `919876543210`, and
-`9876543210` all normalize identically.
-
-**Bulk.** `SendBulk` groups recipients by effective `(template_id, sender)`
-and sends each group as one Flow API call. Groups larger than
-`Config.MaxRecipientsPerCall` (default 1000) are automatically chunked
-across multiple calls; set a negative value to disable chunking.
-
-**OTP capability.** MSG91 implements the optional `gosms.OTPProvider` for
-the full send / verify / resend flow. Callers holding a `gosms.Provider`
-can detect it with a type assertion:
-
-```go
-if otp, ok := provider.(gosms.OTPProvider); ok {
-    // MSG91 generates the code server-side when OTPRequest.OTP is empty.
-    _, err := otp.SendOTP(ctx, &gosms.OTPRequest{
-        Phone:  "+919876543210",
-        Length: 6,
-        Expiry: 5 * time.Minute,
-    })
-
-    vr, err := otp.VerifyOTP(ctx, "+919876543210", "123456")
-    if err == nil && vr.Verified {
-        // OTP matched
-    }
-
-    // Resend via "text" or "voice".
-    _ = otp.ResendOTP(ctx, "+919876543210", "voice")
-}
-```
-
-Delivery status is webhook-driven; parse incoming callbacks with `msg91.ParseWebhook(r)`.
+AWS SNS, Vonage, and MSG91 use the same `gosms.NewClient(provider)` /
+`client.Send(...)` pattern once constructed — see the
+[full guide for each provider](https://kartikrocks.github.io/gosms/docs/providers)
+for their `Config` fields and specifics (MSG91 in particular is
+template-driven rather than free-text).
 
 ## Features
 
@@ -187,280 +109,41 @@ Delivery status is webhook-driven; parse incoming callbacks with `msg91.ParseWeb
 - Pre-built message templates (OTP, alerts, notifications)
 - Mock provider for testing
 
-## Message Builder
+## Documentation
 
-```go
-msg := gosms.NewMessage("+15559876543", "Hello!").
-    WithFrom("+15551234567").
-    WithReference("order-123").
-    WithValidity(1 * time.Hour).
-    WithMetadata("user_id", "12345")
+Full guides live at **[kartikrocks.github.io/gosms](https://kartikrocks.github.io/gosms/)**:
 
-result, err := client.SendMessage(ctx, msg)
-```
+| Guide | Covers |
+| --- | --- |
+| [Getting Started](https://kartikrocks.github.io/gosms/docs/getting-started) | Install and send your first message |
+| [Core](https://kartikrocks.github.io/gosms/docs/core) | `Provider` interface, `Client`, `Message` builder, `Result`/`Status` |
+| [Providers](https://kartikrocks.github.io/gosms/docs/providers) | Twilio, AWS SNS, Vonage, and MSG91 configuration and specifics |
+| [Multi-Provider](https://kartikrocks.github.io/gosms/docs/multi-provider) | Fallback and round-robin across providers |
+| [Bulk Messaging](https://kartikrocks.github.io/gosms/docs/bulk) | `Batch`, `SendToMany`, and `Client.SendBulk` semantics |
+| [Webhooks](https://kartikrocks.github.io/gosms/docs/webhooks) | Delivery-status callbacks for Twilio, Vonage, and MSG91 |
+| [OTP](https://kartikrocks.github.io/gosms/docs/otp) | The optional `OTPProvider` send/verify/resend flow |
+| [Helpers](https://kartikrocks.github.io/gosms/docs/helpers) | Phone validation/normalization, segment calculation, message templates |
+| [Testing](https://kartikrocks.github.io/gosms/docs/testing) | `MockProvider` for tests |
+| [Errors](https://kartikrocks.github.io/gosms/docs/errors) | Sentinel errors and the `DeliveryStatus` lifecycle |
 
-### Scheduled Messages (Twilio)
-
-```go
-msg := gosms.NewMessage("+15559876543", "Reminder: Your appointment is tomorrow").
-    WithSchedule(time.Now().Add(24 * time.Hour))
-
-result, err := client.SendMessage(ctx, msg)
-```
-
-## Bulk Messaging
-
-### Using Batch
-
-```go
-batch := gosms.NewBatch()
-batch.AddNew("+15551111111", "Message 1")
-batch.AddNew("+15552222222", "Message 2")
-batch.AddNew("+15553333333", "Message 3")
-
-results, err := batch.Send(ctx, client)
-for _, result := range results {
-    if result.Success() {
-        log.Printf("Sent to %s: %s", result.To, result.MessageID)
-    } else {
-        log.Printf("Failed to %s: %s", result.To, result.Error)
-    }
-}
-```
-
-### Send Same Message to Many
-
-```go
-results, err := gosms.SendToMany(ctx, client,
-    "Flash sale! 50% off today only!",
-    "+15551111111",
-    "+15552222222",
-    "+15553333333",
-)
-```
-
-## Delivery Status
-
-### Get Status
-
-```go
-status, err := client.GetStatus(ctx, "message_id")
-if err != nil {
-    log.Fatal(err)
-}
-
-if status.Status.IsFinal() {
-    if status.Status.IsSuccess() {
-        log.Printf("Message delivered at %v", status.UpdatedAt)
-    } else {
-        log.Printf("Delivery failed: %s", status.ErrorMessage)
-    }
-}
-```
-
-### Twilio Webhook
-
-```go
-import "github.com/KARTIKrocks/gosms/twilio"
-
-http.HandleFunc("/webhook/twilio", func(w http.ResponseWriter, r *http.Request) {
-    status, err := twilio.ParseWebhook(r)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    log.Printf("Message %s status: %s", status.MessageID, status.Status)
-    w.WriteHeader(http.StatusOK)
-})
-```
-
-### Vonage Webhook
-
-```go
-import "github.com/KARTIKrocks/gosms/vonage"
-
-http.HandleFunc("/webhook/vonage", func(w http.ResponseWriter, r *http.Request) {
-    status, err := vonage.ParseWebhook(r)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    log.Printf("Message %s status: %s", status.MessageID, status.Status)
-    w.WriteHeader(http.StatusOK)
-})
-```
-
-## Multi-Provider
-
-### Fallback
-
-Try Twilio first, fall back to Vonage on failure:
-
-```go
-multi := gosms.NewMultiProvider(twilioProvider, vonageProvider)
-
-client := gosms.NewClient(multi)
-result, err := client.Send(ctx, to, body)
-```
-
-### Round-Robin
-
-Rotate across providers:
-
-```go
-multi := gosms.NewMultiProvider(twilioProvider, vonageProvider).
-    WithStrategy(gosms.StrategyRoundRobin)
-
-client := gosms.NewClient(multi)
-```
-
-## Phone Number Utilities
-
-```go
-// Validate E.164 format
-if gosms.ValidateE164("+15551234567") {
-    log.Println("Valid E.164 number")
-}
-
-// Normalize phone number
-normalized := gosms.NormalizePhone("555-123-4567", "+1")
-// Returns: +15551234567
-
-// Check if message uses GSM 7-bit encoding
-if gosms.IsGSMEncoding("Hello world") {
-    log.Println("GSM encoding (160 char limit)")
-}
-
-// Calculate SMS segments
-segments := gosms.CalculateSegments("Hello, this is a test message!")
-log.Printf("Message will use %d segment(s)", segments)
-```
-
-## Pre-built Message Templates
-
-```go
-// OTP: "123456 is your MyApp verification code."
-msg := gosms.OTPMessage("+15551234567", "123456", "MyApp")
-
-// Alert: "[URGENT] Server is down!"
-msg := gosms.AlertMessage("+15551234567", "URGENT", "Server is down!")
-
-// Notification: "Order Update: Your order has shipped"
-msg := gosms.NotificationMessage("+15551234567", "Order Update", "Your order has shipped")
-```
-
-## Testing with Mock Provider
-
-```go
-mock := gosms.NewMockProvider()
-client := gosms.NewClient(mock)
-
-// Send message
-result, err := client.Send(ctx, "+15551234567", "Test message")
-
-// Verify
-if mock.MessageCount() != 1 {
-    t.Error("Expected 1 message")
-}
-
-lastMsg := mock.LastMessage()
-if lastMsg.Message.Body != "Test message" {
-    t.Error("Message body mismatch")
-}
-
-// Simulate failures
-mock.WithFailAll(true)
-result, err = client.Send(ctx, "+15551234567", "This will fail")
-// result.Status == gosms.StatusFailed
-
-// Simulate errors
-mock.WithSendError(gosms.ErrRateLimited)
-_, err = client.Send(ctx, "+15551234567", "This will error")
-// errors.Is(err, gosms.ErrRateLimited) == true
-
-// Reset mock
-mock.Reset()
-```
-
-## Error Handling
-
-```go
-result, err := client.Send(ctx, to, body)
-if err != nil {
-    switch {
-    case errors.Is(err, gosms.ErrInvalidPhone):
-        log.Println("Invalid phone number")
-    case errors.Is(err, gosms.ErrInvalidMessage):
-        log.Println("Invalid message content")
-    case errors.Is(err, gosms.ErrRateLimited):
-        log.Println("Rate limited, try again later")
-    case errors.Is(err, gosms.ErrInsufficientFunds):
-        log.Println("Account balance too low")
-    case errors.Is(err, gosms.ErrBlacklisted):
-        log.Println("Number is blacklisted")
-    case errors.Is(err, gosms.ErrProviderError):
-        log.Println("Provider error:", err)
-    default:
-        log.Println("Unknown error:", err)
-    }
-}
-```
-
-## Delivery Status Values
-
-| Status            | Description                     |
-| ----------------- | ------------------------------- |
-| `StatusPending`   | Message is pending              |
-| `StatusQueued`    | Message is queued for delivery  |
-| `StatusAccepted`  | Message accepted by provider    |
-| `StatusSent`      | Message sent to carrier         |
-| `StatusDelivered` | Message delivered to recipient  |
-| `StatusFailed`    | Delivery failed                 |
-| `StatusRejected`  | Message was rejected            |
-| `StatusExpired`   | Message expired before delivery |
-| `StatusUnknown`   | Status unknown                  |
-
-## AWS SNS Additional Features
-
-```go
-import "github.com/KARTIKrocks/gosms/sns"
-
-provider, _ := sns.NewProvider(ctx, config)
-
-// Set account-level SMS attributes
-err := provider.SetSMSAttributes(ctx,
-    "100.00",                          // Monthly spend limit
-    "arn:aws:iam::123:role/SNSRole",   // IAM role for delivery logs
-    "100",                             // Success sampling rate %
-)
-
-// Check opt-out status
-optedOut, err := provider.CheckIfPhoneNumberIsOptedOut(ctx, "+15551234567")
-
-// List opted-out numbers
-numbers, err := provider.ListPhoneNumbersOptedOut(ctx)
-
-// Opt-in a number
-err = provider.OptInPhoneNumber(ctx, "+15551234567")
-```
+Exact type signatures are always generated from source on
+[pkg.go.dev](https://pkg.go.dev/github.com/KARTIKrocks/gosms).
 
 ## Examples
 
 See the [`examples/`](examples/) directory for runnable examples:
 
-| Example                                      | Description                                          |
-| -------------------------------------------- | ---------------------------------------------------- |
-| [basic](examples/basic/)                     | Core API usage with mock provider                    |
-| [twilio-provider](examples/twilio-provider/) | Sending via Twilio                                   |
-| [sns-provider](examples/sns-provider/)       | Sending via AWS SNS                                  |
-| [vonage-provider](examples/vonage-provider/) | Sending via Vonage                                   |
-| [msg91-provider](examples/msg91-provider/)   | Sending via MSG91 (Flow templates + OTP)             |
-| [multi-provider](examples/multi-provider/)   | Fallback and round-robin strategies                  |
-| [webhooks](examples/webhooks/)               | Delivery status webhook server                       |
-| [mock-testing](examples/mock-testing/)       | Using MockProvider in tests                          |
-| [helpers](examples/helpers/)                 | Phone validation, normalization, segment calculation |
+| Example | Description |
+| --- | --- |
+| [basic](examples/basic/) | Core API usage with mock provider |
+| [twilio-provider](examples/twilio-provider/) | Sending via Twilio |
+| [sns-provider](examples/sns-provider/) | Sending via AWS SNS |
+| [vonage-provider](examples/vonage-provider/) | Sending via Vonage |
+| [msg91-provider](examples/msg91-provider/) | Sending via MSG91 (Flow templates + OTP) |
+| [multi-provider](examples/multi-provider/) | Fallback and round-robin strategies |
+| [webhooks](examples/webhooks/) | Delivery status webhook server |
+| [mock-testing](examples/mock-testing/) | Using `MockProvider` in tests |
+| [helpers](examples/helpers/) | Phone validation, normalization, segment calculation |
 
 ```bash
 # Run an example (no credentials needed)
@@ -469,34 +152,18 @@ cd examples/basic && go run .
 
 ## Project Structure
 
-```
+```text
 gosms/
 ├── sms.go          # Core types: Provider, Message, Result, Status, Client
 ├── helpers.go      # Utilities: validation, segments, batch, multi-provider
 ├── mock.go         # MockProvider for testing
 ├── doc.go          # Package documentation
 ├── twilio/         # Twilio provider (separate module)
-│   ├── go.mod
-│   └── twilio.go
 ├── sns/            # AWS SNS provider (separate module)
-│   ├── go.mod
-│   └── sns.go
 ├── vonage/         # Vonage provider (separate module)
-│   ├── go.mod
-│   └── vonage.go
 ├── msg91/          # MSG91 provider (separate module)
-│   ├── go.mod
-│   └── msg91.go
+├── website/        # Docusaurus documentation site (github.io/gosms)
 └── examples/       # Runnable examples
-    ├── basic/
-    ├── twilio-provider/
-    ├── sns-provider/
-    ├── vonage-provider/
-    ├── msg91-provider/
-    ├── multi-provider/
-    ├── webhooks/
-    ├── mock-testing/
-    └── helpers/
 ```
 
 ## Thread Safety
@@ -506,6 +173,22 @@ gosms/
 - `MockProvider` is safe for concurrent use with internal locking
 - `MultiProvider` round-robin counter is atomic
 
+## Security
+
+Every push and pull request to `main` is scanned by
+[CodeQL](https://github.com/KARTIKrocks/gosms/actions/workflows/codeql.yml),
+with a full re-scan weekly to catch newly published query patterns against
+unchanged code. [Dependabot](.github/dependabot.yml) tracks updates across
+every Go module, the GitHub Actions themselves, and the documentation site's
+npm dependencies.
+
+See [SECURITY.md](SECURITY.md) for supported versions, what's in scope, and
+how to report a vulnerability privately.
+
 ## License
 
 [MIT](LICENSE)
+
+## Contributing
+
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
