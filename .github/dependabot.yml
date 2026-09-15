@@ -59,3 +59,13 @@ updates:
     labels:
       - ci
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(website)"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5

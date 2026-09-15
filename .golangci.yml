@@ -61,8 +61,6 @@ linters:
       require-explanation: true
       require-specific: true
   exclusions:
-    paths:
-      - "gosms-website/"
     rules:
       - linters:
           - errcheck

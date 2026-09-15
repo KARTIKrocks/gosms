@@ -13,6 +13,8 @@ This is a **Go workspace** (`go.work`) of five modules:
 - `.` (root) — `github.com/KARTIKrocks/gosms`: core types and provider-independent helpers. **No third-party dependencies.**
 - `./twilio`, `./sns`, `./vonage`, `./msg91` — one module per provider, each importing the core module.
 
+`./website` is a separate npm project (Docusaurus), not part of `go.work` — see "Documentation website" below.
+
 Implications:
 
 - Every module has its own `go.mod`/`go.sum`. Run `go` commands from inside the relevant module directory; the `Makefile` loops over all modules for you.
@@ -77,7 +79,7 @@ The core module (`sms.go`, `helpers.go`, `mock.go`) defines the contract; provid
 
 Releasing is manual. Tag the root module first and push that tag, then point each
 sub-module at it and tag them in a second commit — a module tag resolves to a
-commit, and the proxy reads *that commit's* `go.mod`, so tagging before the bump
+commit, and the proxy reads _that commit's_ `go.mod`, so tagging before the bump
 would publish a provider still requiring the old core.
 
 ```bash
@@ -97,3 +99,54 @@ git push origin main --tags
 No published module carries a `replace` directive — the committed `go.work`
 handles local resolution, so there is no strip/restore step to forget. (The
 `examples/` modules do use `replace`; they are never published.)
+
+## Automated code review
+
+Two bots review every PR; both are config-as-code and should stay in sync with
+these conventions when they change:
+
+- **CodeRabbit** — [`.coderabbit.yaml`](.coderabbit.yaml). Advisory only
+  (`request_changes_workflow: false`); CI is the actual merge gate.
+- **Greptile** — [`.greptile/`](.greptile/) (`config.json` for scoped rules
+  and settings, `rules.md` for freeform style guidance, `files.json` for
+  context files it should read). Also advisory.
+
+If you change a convention documented in this file that either bot enforces
+(the error-wrapping/context rules, the no-`replace`-on-published-modules rule,
+the docs version-marker convention below), update both configs in the same
+PR — a stale bot rule actively misleads the next contributor it comments on.
+
+## Documentation website
+
+The docs site lives on `main` in **`website/`** and is built with
+**Docusaurus** (TypeScript, Biome for lint/format). It is published to GitHub
+Pages by `.github/workflows/docs.yml` on every push to `main` that touches
+`website/` — there is no manual deploy step and nothing to mirror onto
+another branch.
+
+```bash
+cd website
+npm ci
+npm start          # preview at localhost:3000/gosms/
+npm run check      # lint + typecheck + build — what the Docs workflow runs
+```
+
+`npm run lint` is `biome check`, which covers formatting as well as linting.
+Biome has no Markdown support, so prose is linted separately and repo-wide
+with `make lint-docs` (config: `.markdownlint-cli2.jsonc`).
+
+**Versioning is by snapshot, not per release** — see
+[`website/VERSIONING.md`](website/VERSIONING.md) for the full policy. gosms
+hasn't cut a snapshot yet, so `website/docs/` is currently served directly at
+`/docs/` and `versions.json` is `[]`. Once a first snapshot exists:
+
+- **Never edit `website/versioned_docs/`.** Changing a snapshot rewrites
+  history for users still on that version. Snapshots are cut deliberately
+  with `website/scripts/cut-version.mjs`.
+- **Public API change** — update the matching page under `website/docs/` and
+  mark the version inline rather than cutting a new snapshot (see
+  VERSIONING.md rule 2 for the exact markers).
+
+Internal links are checked at build time (`onBrokenLinks: 'throw'`), so a
+renamed page fails the Docs workflow rather than shipping a dead link.
+External links are **not** checked.
