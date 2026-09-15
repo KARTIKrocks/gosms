@@ -2,7 +2,7 @@
   "strictness": 2,
   "commentTypes": ["logic", "syntax", "style"],
   "instructions": "gosms is a public, production-grade Go SMS library with a stable exported API. The core module (github.com/KARTIKrocks/gosms) has zero third-party dependencies; each provider (twilio, sns, vonage, msg91) is its own Go module that implements the core Provider interface. Prioritize correctness, backward compatibility of every exported identifier, error handling, concurrency safety, context propagation, and Go idioms over stylistic nits. golangci-lint v2, `go test -race`, and CodeQL are the merge gate — surface findings as review comments, not blockers.",
-  "ignorePatterns": "gosms-website/**\n**/vendor/**\n**/testdata/**\n**/*.sum\ngo.work\ngo.work.sum\n**/*.svg\n**/*.png\nCHANGELOG.md\nLICENSE",
+  "ignorePatterns": "**/vendor/**\n**/testdata/**\n**/*.sum\ngo.work\ngo.work.sum\n**/*.svg\n**/*.png\nCHANGELOG.md\nLICENSE\n**/node_modules/**\n**/package-lock.json\nwebsite/build/**\nwebsite/.docusaurus/**\nwebsite/versioned_docs/**\nwebsite/versioned_sidebars/**",
   "excludeAuthors": ["dependabot[bot]", "github-actions[bot]"],
   "includeBranches": ["main"],
   "triggerOnUpdates": true,
@@ -62,6 +62,12 @@
       "severity": "low",
       "scope": ["**/*_test.go"],
       "rule": "Prefer table-driven tests. Cover error paths and edge cases: empty input, invalid or non-E.164 numbers, provider failures, and context cancellation. No real network calls — use httptest or the package mocks. Time-dependent tests should use testing/synctest rather than real sleeps."
+    },
+    {
+      "id": "docs-site-accuracy",
+      "severity": "medium",
+      "scope": ["website/docs/**"],
+      "rule": "Docusaurus source for the unreleased docs. Every Go snippet must compile against the current API, and every identifier (type, method, config field) must match the real exported API exactly. gosms has not cut a documentation snapshot yet (see website/VERSIONING.md); once one exists, a page documenting a new API should carry its version marker instead of being silently rewritten, and website/versioned_docs must never be hand-edited."
     }
   ]
 }

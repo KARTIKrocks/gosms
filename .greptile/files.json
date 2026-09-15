@@ -15,6 +15,10 @@
     {
       "path": "helpers.go",
       "description": "Provider-agnostic helpers: E.164 validation/normalization, GSM 03.38 vs UCS-2 segment counting, MultiProvider, and message constructors."
+    },
+    {
+      "path": "website/VERSIONING.md",
+      "description": "Documentation versioning policy: when to cut a snapshot vs. use an inline version marker, and the release runbook for website/docs."
     }
   ]
 }

@@ -40,10 +40,20 @@ reviews:
     - "!**/vendor/**"
     - "!**/*.sum"
     - "!**/testdata/**"
-    - "!gosms-website/**"
     - "!**/*.svg"
     - "!**/*.png"
     - "!CHANGELOG.md"
+    - "!**/node_modules/**"
+    - "!**/package-lock.json"
+    - "!website/build/**"
+    - "!website/.docusaurus/**"
+    # Frozen snapshots taken by `cut-version.mjs` at release time. A docs
+    # change lands in website/docs/ only — snapshots are never hand-edited,
+    # so any suggestion here is unactionable: a published snapshot documents
+    # the behaviour of a shipped version, and changing it rewrites history
+    # for users still on it.
+    - "!website/versioned_docs/**"
+    - "!website/versioned_sidebars/**"
 
   # Targeted guidance per area of the codebase.
   path_instructions:
@@ -77,6 +87,24 @@ reviews:
       instructions: >-
         Review CI workflows for security: pin third-party actions, scope GITHUB
         TOKEN permissions to least privilege, and avoid leaking secrets in logs.
+    - path: "website/docs/**"
+      instructions: >-
+        Docusaurus source for the unreleased docs. Verify every Go snippet
+        compiles against the current API and that identifier names (types,
+        methods, config fields) match the real exported API exactly — a wrong
+        name here is a support burden, not a typo. gosms has not cut a
+        documentation snapshot yet (see website/VERSIONING.md); once one
+        exists, a page documenting a new API should carry its version marker
+        (e.g. `_0.2+_` appended to a table cell, or `_Added in 0.2._` opening
+        a paragraph) rather than being silently rewritten. Never suggest
+        edits to website/versioned_docs once that directory exists — those
+        are frozen release snapshots.
+    - path: "website/src/**"
+      instructions: >-
+        Docusaurus TypeScript/React source (landing page, theme). Follow the
+        repo's Biome config rather than suggesting a different style; flag
+        `any`, non-null assertions, and unused imports/variables the same way
+        `biome check` would.
 
   tools:
     # Surface the same lint findings the project already enforces via .golangci.yml.
@@ -131,4 +159,4 @@ knowledge_base:
     enabled: true
     filePatterns:
       - "CONTRIBUTING.md"
-      - "CLAUDE.md"
+      - "AGENTS.md"

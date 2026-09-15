@@ -11,9 +11,6 @@ coverage*.out
 *.so
 *.dylib
 
-# website
-gosms-website
-
 # go.work is deliberately committed: every published module in this repo lives
 # here, and the workspace is what makes the providers compile against this tree
 # instead of the published root module. Consumers never see it.
