@@ -49,10 +49,10 @@ const includedVersions = fastBuild
   ? ['current', ...allVersions.slice(0, 1)]
   : ['current', ...liveVersions];
 
-// No snapshot has been cut yet (versions.json is []), so `docs/` is the only
-// version and should serve directly at /docs/ with no "unreleased" banner —
-// there's nothing released yet for it to be unreleased *relative to*. Once
-// `npm run cut-version` produces a first entry in versions.json, this flips
+// Only meaningful once versions.json is non-empty: with no snapshot cut,
+// `docs/` is the only version and should serve directly at /docs/ with no
+// "unreleased" banner — there's nothing released yet for it to be unreleased
+// *relative to*. Once a snapshot exists (as of the 0.3 cut), this flips
 // `docs/` over to /docs/next/ with the banner, matching wshub's convention.
 const docsVersions =
   allVersions.length > 0

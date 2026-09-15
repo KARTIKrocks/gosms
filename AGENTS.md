@@ -136,9 +136,9 @@ Biome has no Markdown support, so prose is linted separately and repo-wide
 with `make lint-docs` (config: `.markdownlint-cli2.jsonc`).
 
 **Versioning is by snapshot, not per release** — see
-[`website/VERSIONING.md`](website/VERSIONING.md) for the full policy. gosms
-hasn't cut a snapshot yet, so `website/docs/` is currently served directly at
-`/docs/` and `versions.json` is `[]`. Once a first snapshot exists:
+[`website/VERSIONING.md`](website/VERSIONING.md) for the full policy.
+`website/versioned_docs/version-0.3/` is the current snapshot, served at
+`/docs/`; `website/docs/` tracks `main` and is served at `/docs/next/`.
 
 - **Never edit `website/versioned_docs/`.** Changing a snapshot rewrites
   history for users still on that version. Snapshots are cut deliberately

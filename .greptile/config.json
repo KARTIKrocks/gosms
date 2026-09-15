@@ -67,7 +67,7 @@
       "id": "docs-site-accuracy",
       "severity": "medium",
       "scope": ["website/docs/**"],
-      "rule": "Docusaurus source for the unreleased docs. Every Go snippet must compile against the current API, and every identifier (type, method, config field) must match the real exported API exactly. gosms has not cut a documentation snapshot yet (see website/VERSIONING.md); once one exists, a page documenting a new API should carry its version marker instead of being silently rewritten, and website/versioned_docs must never be hand-edited."
+      "rule": "Docusaurus source for the unreleased docs. Every Go snippet must compile against the current API, and every identifier (type, method, config field) must match the real exported API exactly. Versioning is by snapshot (see website/VERSIONING.md): a page documenting a new API since the current snapshot should carry a version marker instead of triggering a new snapshot, and website/versioned_docs must never be hand-edited."
     }
   ]
 }

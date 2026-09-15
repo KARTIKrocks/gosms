@@ -1,0 +1,47 @@
+{
+  "docsSidebar": [
+    "intro",
+    "getting-started",
+    {
+      "type": "category",
+      "label": "Core",
+      "collapsed": false,
+      "items": [
+        "core"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Providers",
+      "collapsed": false,
+      "items": [
+        "providers",
+        "twilio",
+        "sns",
+        "vonage",
+        "msg91"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Advanced",
+      "collapsed": false,
+      "items": [
+        "multi-provider",
+        "bulk",
+        "webhooks",
+        "otp"
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Reference",
+      "collapsed": false,
+      "items": [
+        "helpers",
+        "testing",
+        "errors"
+      ]
+    }
+  ]
+}
