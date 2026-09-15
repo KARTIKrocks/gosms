@@ -29,9 +29,9 @@ defaults:
     working-directory: website
 
 jobs:
-  # Lint, typecheck, and build. There's no historical-version window to skip
-  # yet (versions.json is empty), so this is the same build the deploy job
-  # runs — once a snapshot exists, this can switch to `build:fast`.
+  # Lint, typecheck, and a narrowed build. DOCS_FAST_BUILD limits this to the
+  # unreleased docs plus the newest version, which is what a PR actually
+  # changes — rebuilding every historical snapshot on every PR is wasted CI.
   check:
     name: check
     runs-on: ubuntu-latest
@@ -52,7 +52,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Build
-        run: npm run build
+        run: npm run build:fast
 
   # Full build, then publish. Only from main.
   deploy:

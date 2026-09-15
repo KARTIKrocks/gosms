@@ -1,11 +1,10 @@
 # Documentation versioning
 
-gosms doesn't have a version snapshot yet — `versions.json` is `[]` and
-everything lives in `docs/`, served at `/docs/`. The infrastructure below
-exists so that the *first* release which changes documented behaviour has
-somewhere to go without inventing the process under time pressure. Until
-then, treat this file as the runbook you'll follow, not a description of
-something already in place.
+`versioned_docs/version-0.3/` is a snapshot of the docs as they stood at
+`v0.3.0` — cut as the baseline when the docs site launched, rather than
+because `v0.3.0` itself broke anything documented. `docs/` now tracks `main`
+and is served at `/docs/next/`; `/docs/` serves the `0.3` snapshot. The rules
+below govern every cut *after* this one.
 
 ## The rules
 
@@ -39,10 +38,10 @@ being copied into a snapshot:
 
 | Situation | Write |
 | --- | --- |
-| New row in an API table | append `_0.2+_` to the description cell |
-| New option or behaviour in prose | open the paragraph with `_Added in 0.2._` |
-| New member inside a code block | trailing `// 0.2+` comment |
-| Behaviour that changed | `_Changed in 0.3._` plus one line on what it was before |
+| New row in an API table | append `_0.4+_` to the description cell |
+| New option or behaviour in prose | open the paragraph with `_Added in 0.4._` |
+| New member inside a code block | trailing `// 0.4+` comment |
+| Behaviour that changed | `_Changed in 0.4._` plus one line on what it was before |
 
 Markers use `MAJOR.MINOR` — matching snapshot names — so they stay greppable.
 Drop a marker once it names a version older than the oldest live snapshot; by
@@ -73,14 +72,13 @@ release count.
 
 | Directory | Serves | URL |
 | --- | --- | --- |
-| `docs/` | **Next** — unreleased, tracks `main` | `/docs/next/` (once a snapshot exists) |
+| `docs/` | **Next** — unreleased, tracks `main` | `/docs/next/` |
 | `versioned_docs/version-<minor>/` | the current release | `/docs/` |
 
-Until the first snapshot is cut, `docs/` is served directly at `/docs/` — the
-`current`/`next` split in `docusaurus.config.ts` only takes effect once
-`versions.json` is non-empty. A PR that changes documented behaviour always
-edits `docs/`, not a snapshot — the snapshot (once one exists) is frozen
-history.
+A reader who lands on `/docs/` sees released behaviour (currently the `0.3`
+snapshot). Someone who wants what's on `main` opens `/docs/next/`, which
+carries an "unreleased" banner. A PR that changes documented behaviour always
+edits `docs/`, not a snapshot — the snapshot is frozen history.
 
 ## Release runbook
 
@@ -91,8 +89,7 @@ there.
 
 Make sure `docs/` describes the release accurately — everything merged into
 `main` since the last release should already be reflected there — and that
-new APIs carry their version markers once a first snapshot exists (before
-that, there's nothing to mark against).
+new APIs carry their version markers (see rule 2).
 
 ### If the release only adds
 
@@ -102,18 +99,18 @@ Nothing else to do. `docs/` becomes the new truth on the next deploy.
 
 ```bash
 cd website
-npm run cut-version -- 0.2
+npm run cut-version -- 0.4
 npm run check
 ```
 
-`versions.json`, `versioned_docs/version-0.2/`, and
-`versioned_sidebars/version-0.2-sidebars.json` are created for you, `/docs/`
-starts serving 0.2, and `docs/` becomes `/docs/next/`.
+`versions.json`, `versioned_docs/version-0.4/`, and
+`versioned_sidebars/version-0.4-sidebars.json` are created for you, `/docs/`
+starts serving 0.4, and 0.3 moves into the version dropdown.
 
 ### Patch releases
 
-Never a snapshot. Edit `versioned_docs/version-<minor>/` directly (once one
-exists), and mirror the change into `docs/` if it still applies to `main`.
+Never a snapshot. Edit the matching `versioned_docs/version-<minor>/`
+directly, and mirror the change into `docs/` if it still applies to `main`.
 
 ## Day-to-day
 

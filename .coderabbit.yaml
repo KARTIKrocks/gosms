@@ -92,13 +92,12 @@ reviews:
         Docusaurus source for the unreleased docs. Verify every Go snippet
         compiles against the current API and that identifier names (types,
         methods, config fields) match the real exported API exactly — a wrong
-        name here is a support burden, not a typo. gosms has not cut a
-        documentation snapshot yet (see website/VERSIONING.md); once one
-        exists, a page documenting a new API should carry its version marker
-        (e.g. `_0.2+_` appended to a table cell, or `_Added in 0.2._` opening
-        a paragraph) rather than being silently rewritten. Never suggest
-        edits to website/versioned_docs once that directory exists — those
-        are frozen release snapshots.
+        name here is a support burden, not a typo. Versioning is by snapshot
+        (see website/VERSIONING.md): a page documenting a new API since the
+        current snapshot should carry a version marker (e.g. `_0.4+_`
+        appended to a table cell, or `_Added in 0.4._` opening a paragraph)
+        rather than triggering a new snapshot. Never suggest edits to
+        website/versioned_docs — those are frozen release snapshots.
     - path: "website/src/**"
       instructions: >-
         Docusaurus TypeScript/React source (landing page, theme). Follow the
