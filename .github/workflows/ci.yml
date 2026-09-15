@@ -66,6 +66,32 @@ jobs:
           working-directory: ${{ matrix.module }}
           args: --timeout=5m
 
+  # Structural linting for every Markdown file in the repo. This lives here
+  # rather than in the Docs workflow because that one is path-filtered to
+  # website/**, so a change to the root README, CONTRIBUTING.md, or
+  # SECURITY.md would never trigger it. Config and rule rationale:
+  # .markdownlint-cli2.jsonc. Uses the website's markdownlint-cli2
+  # devDependency rather than a separate install.
+  docs-lint:
+    name: lint (markdown)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install
+        working-directory: website
+        run: npm ci
+      # Run from the repository root, not website/. The config globs every
+      # .md in the repo and globs resolve against the working directory, so
+      # running this from website/ would silently check only the site's own
+      # pages.
+      - name: Lint Markdown
+        run: make lint-docs
+
   bench:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

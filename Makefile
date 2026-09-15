@@ -4,7 +4,7 @@ GOIMPORTS_VERSION := v0.49.0
 MODULES = . ./twilio ./sns ./vonage ./msg91
 SUB_MODULES = ./twilio ./sns ./vonage ./msg91
 
-.PHONY: all setup test test-race coverage lint lint-fix fix fmt fmt-check vet tidy build bench clean ci
+.PHONY: all setup test test-race coverage lint lint-fix lint-docs fix fmt fmt-check vet tidy build bench clean ci
 
 all: tidy fmt vet lint build test
 
@@ -71,6 +71,13 @@ lint-fix: setup
 		echo "==> Lint-fixing $$mod"; \
 		(cd $$mod && golangci-lint run --fix --timeout=5m ./...) || exit 1; \
 	done
+
+## Lint every Markdown file in the repo (config: .markdownlint-cli2.jsonc).
+## Uses the website's markdownlint-cli2 devDependency; run `npm ci` in
+## website/ first if node_modules isn't there yet. Runs from the repo root
+## since the config globs the whole tree, not just website/.
+lint-docs:
+	@website/node_modules/.bin/markdownlint-cli2
 
 ## Fix code formatting and linting issues
 fix: fmt lint-fix
