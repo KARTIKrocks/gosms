@@ -1,26 +1,14 @@
-GOLANGCI_LINT_VERSION := v2.13.0
-GOIMPORTS_VERSION := v0.49.0
+include common.mk
 
 MODULES = . ./twilio ./sns ./vonage ./msg91
 SUB_MODULES = ./twilio ./sns ./vonage ./msg91
 
-.PHONY: all setup test test-race coverage lint lint-fix lint-docs fix fmt fmt-check vet tidy build bench clean ci
+.PHONY: all setup test test-race coverage lint lint-fix lint-docs fix fmt fmt-check vet vuln tidy build bench clean ci
 
 all: tidy fmt vet lint build test
 
 ## CI: run lint and tests with race detector (used in CI pipelines)
-ci: fmt-check vet lint test-race
-
-## Install development tools (skips if already present)
-setup:
-	@command -v golangci-lint >/dev/null 2>&1 || { \
-		echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."; \
-		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
-	}
-	@command -v goimports >/dev/null 2>&1 || { \
-		echo "Installing goimports $(GOIMPORTS_VERSION)..."; \
-		go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION); \
-	}
+ci: fmt-check vet lint test-race vuln
 
 ## Build all modules
 build:
@@ -97,6 +85,16 @@ vet:
 	@for mod in $(MODULES); do \
 		echo "==> Vetting $$mod"; \
 		(cd $$mod && go vet ./...) || exit 1; \
+	done
+
+## Scan for known vulnerabilities across all modules, filtered to advisories
+## this code actually reaches.
+##
+## Needs network access — the advisory database is fetched on every run.
+vuln: setup
+	@for mod in $(MODULES); do \
+		echo "==> Scanning $$mod"; \
+		(cd $$mod && govulncheck ./...) || exit 1; \
 	done
 
 ## Run go mod tidy across all modules
