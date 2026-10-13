@@ -10,6 +10,9 @@ permissions:
   contents: read
 
 jobs:
+  common-mk:
+    uses: KARTIKrocks/go-build-tools/.github/workflows/check-common-mk.yml@6023c2444c2dbaf87b4aba9570e98fae59caf242 # pinned; bump deliberately
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -60,9 +63,11 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27"
+      - id: golangci-lint-version
+        run: echo "version=$(make print-golangci-lint-version)" >> "$GITHUB_OUTPUT"
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.13.0
+          version: ${{ steps.golangci-lint-version.outputs.version }}
           working-directory: ${{ matrix.module }}
           args: --timeout=5m
 
@@ -91,6 +96,16 @@ jobs:
       # pages.
       - name: Lint Markdown
         run: make lint-docs
+
+  vuln:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+          check-latest: true
+      - run: make vuln
 
   bench:
     runs-on: ubuntu-latest
