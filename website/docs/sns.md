@@ -32,14 +32,14 @@ client := gosms.NewClient(provider)
 result, err := client.Send(ctx, "+15559876543", "Your code is 123456")
 ```
 
-| Field | Purpose |
-| --- | --- |
-| `Region` | AWS region |
-| `AccessKeyID`, `SecretAccessKey` | AWS credentials (omit to use the default credential chain) |
-| `SenderID` | Alphanumeric sender ID, where supported by the destination country |
-| `SMSType` | `sns.SMSTransactional` or `sns.SMSPromotional` |
-| `MaxPrice` | Optional per-message spend cap |
-| `Client` | Optional — supply a pre-configured `*sns.Client` instead of building one from the fields above |
+| Field                            | Purpose                                                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Region`                         | AWS region                                                                                     |
+| `AccessKeyID`, `SecretAccessKey` | AWS credentials (omit to use the default credential chain)                                     |
+| `SenderID`                       | Alphanumeric sender ID, where supported by the destination country                             |
+| `SMSType`                        | `sns.SMSTransactional` or `sns.SMSPromotional`                                                 |
+| `MaxPrice`                       | Optional per-message spend cap                                                                 |
+| `Client`                         | Optional — supply a pre-configured `*sns.Client` instead of building one from the fields above |
 
 ## Account-level extras
 

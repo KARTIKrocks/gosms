@@ -50,13 +50,13 @@ mock.WithDeliverAll(false)
 
 ## Inspecting sent messages
 
-| Method | Returns |
-| --- | --- |
-| `Messages()` | All sent `*MockMessage`s, in order |
-| `LastMessage()` | The most recent `*MockMessage`, or `nil` if none sent |
-| `MessageCount()` | Number of messages sent |
-| `FindMessagesByTo(to)` | All messages sent to a given recipient |
-| `FindMessageByID(id)` | The message with the given provider message ID, or `nil` |
+| Method                  | Returns                                                          |
+| ----------------------- | ---------------------------------------------------------------- |
+| `Messages()`            | All sent `*MockMessage`s, in order                               |
+| `LastMessage()`         | The most recent `*MockMessage`, or `nil` if none sent            |
+| `MessageCount()`        | Number of messages sent                                          |
+| `FindMessagesByTo(to)`  | All messages sent to a given recipient                           |
+| `FindMessageByID(id)`   | The message with the given provider message ID, or `nil`         |
 | `SetStatus(id, status)` | Manually set the status returned by `GetStatus` for a message ID |
 
 `MockMessage` carries `MessageID`, `Message` (the original `*gosms.Message`),

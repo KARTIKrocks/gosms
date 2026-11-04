@@ -26,14 +26,14 @@ client := gosms.NewClient(provider)
 result, err := client.Send(ctx, "+15559876543", "Hello from gosms!")
 ```
 
-| Field | Purpose |
-| --- | --- |
-| `AccountSID`, `AuthToken` | Twilio API credentials |
-| `From` | Default sender number, used when a `Message` doesn't set `From` |
-| `MessagingServiceSID` | Optional — route through a Messaging Service instead of a single `From` number |
-| `StatusCallback` | Optional — URL Twilio posts delivery status updates to |
-| `HTTPClient` | Optional — override the default `*http.Client` |
-| `BaseURL` | Optional — override the Twilio API base URL (testing) |
+| Field                     | Purpose                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| `AccountSID`, `AuthToken` | Twilio API credentials                                                         |
+| `From`                    | Default sender number, used when a `Message` doesn't set `From`                |
+| `MessagingServiceSID`     | Optional — route through a Messaging Service instead of a single `From` number |
+| `StatusCallback`          | Optional — URL Twilio posts delivery status updates to                         |
+| `HTTPClient`              | Optional — override the default `*http.Client`                                 |
+| `BaseURL`                 | Optional — override the Twilio API base URL (testing)                          |
 
 ## Scheduled messages
 

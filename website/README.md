@@ -22,12 +22,12 @@ npm run check    # lint + typecheck + build
 
 Individually:
 
-| Command | Does |
-| --- | --- |
-| `npm run lint` | Biome lint + format check |
-| `npm run lint:fix` | Biome autofix |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run build` | full production build |
+| Command              | Does                                                       |
+| -------------------- | ---------------------------------------------------------- |
+| `npm run lint`       | Biome lint + format check                                  |
+| `npm run lint:fix`   | Biome autofix                                              |
+| `npm run typecheck`  | `tsc --noEmit`                                             |
+| `npm run build`      | full production build                                      |
 | `npm run build:fast` | narrowed build — skips historical versions once they exist |
 
 ## Editing docs

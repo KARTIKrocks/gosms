@@ -4,14 +4,14 @@
 `v0.3.0` — cut as the baseline when the docs site launched, rather than
 because `v0.3.0` itself broke anything documented. `docs/` now tracks `main`
 and is served at `/docs/next/`; `/docs/` serves the `0.3` snapshot. The rules
-below govern every cut *after* this one.
+below govern every cut _after_ this one.
 
 ## The rules
 
 ### 1. Snapshot when a release changes documented behaviour — not on every release
 
-A snapshot exists to answer one question: *what was true before this release
-broke it?* If nothing broke, the snapshot is a byte-identical copy of every doc
+A snapshot exists to answer one question: _what was true before this release
+broke it?_ If nothing broke, the snapshot is a byte-identical copy of every doc
 page that has to be maintained forever.
 
 **The test:** does this release make an existing page **wrong for someone on
@@ -36,12 +36,12 @@ you what existed, a marker tells you what upgrading buys you.
 The convention is plain Markdown, so it needs no components and survives
 being copied into a snapshot:
 
-| Situation | Write |
-| --- | --- |
-| New row in an API table | append `_0.4+_` to the description cell |
-| New option or behaviour in prose | open the paragraph with `_Added in 0.4._` |
-| New member inside a code block | trailing `// 0.4+` comment |
-| Behaviour that changed | `_Changed in 0.4._` plus one line on what it was before |
+| Situation                        | Write                                                   |
+| -------------------------------- | ------------------------------------------------------- |
+| New row in an API table          | append `_0.4+_` to the description cell                 |
+| New option or behaviour in prose | open the paragraph with `_Added in 0.4._`               |
+| New member inside a code block   | trailing `// 0.4+` comment                              |
+| Behaviour that changed           | `_Changed in 0.4._` plus one line on what it was before |
 
 Markers use `MAJOR.MINOR` — matching snapshot names — so they stay greppable.
 Drop a marker once it names a version older than the oldest live snapshot; by
@@ -70,10 +70,10 @@ release count.
 
 ### 5. `docs/` is the future, not the present
 
-| Directory | Serves | URL |
-| --- | --- | --- |
-| `docs/` | **Next** — unreleased, tracks `main` | `/docs/next/` |
-| `versioned_docs/version-<minor>/` | the current release | `/docs/` |
+| Directory                         | Serves                               | URL           |
+| --------------------------------- | ------------------------------------ | ------------- |
+| `docs/`                           | **Next** — unreleased, tracks `main` | `/docs/next/` |
+| `versioned_docs/version-<minor>/` | the current release                  | `/docs/`      |
 
 A reader who lands on `/docs/` sees released behaviour (currently the `0.3`
 snapshot). Someone who wants what's on `main` opens `/docs/next/`, which

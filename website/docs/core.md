@@ -38,15 +38,15 @@ capabilities, detected with a type assertion:
 `Client` wraps any `Provider` and adds convenience methods. It is safe for
 concurrent use after construction.
 
-| Method | Description |
-| --- | --- |
-| `Send(ctx, to, body)` | Send plain text — shortcut over `SendMessage` |
-| `SendMessage(ctx, msg)` | Send a fully-built `Message` (overrides, schedule, metadata) |
-| `SendBulk(ctx, msgs)` | Send a slice of `Message`s — see [Bulk Messaging](bulk) |
-| `GetStatus(ctx, id)` | Look up delivery status by provider message ID |
-| `Provider()` | Access the underlying `Provider` (for type assertions like `OTPProvider`) |
-| `ProviderName()` | The underlying provider's `Name()` |
-| `WithDefaultFrom(from)` | Set a default sender applied when a `Message` doesn't set one |
+| Method                  | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `Send(ctx, to, body)`   | Send plain text — shortcut over `SendMessage`                             |
+| `SendMessage(ctx, msg)` | Send a fully-built `Message` (overrides, schedule, metadata)              |
+| `SendBulk(ctx, msgs)`   | Send a slice of `Message`s — see [Bulk Messaging](bulk)                   |
+| `GetStatus(ctx, id)`    | Look up delivery status by provider message ID                            |
+| `Provider()`            | Access the underlying `Provider` (for type assertions like `OTPProvider`) |
+| `ProviderName()`        | The underlying provider's `Name()`                                        |
+| `WithDefaultFrom(from)` | Set a default sender applied when a `Message` doesn't set one             |
 
 ```go
 client := gosms.NewClient(provider).WithDefaultFrom("+15551234567")
@@ -74,14 +74,14 @@ msg := gosms.NewMessage("+15559876543", "Hello!").
 result, err := client.SendMessage(ctx, msg)
 ```
 
-| Field / method | Purpose |
-| --- | --- |
-| `To`, `Body` | Set via `NewMessage(to, body)` |
-| `WithFrom(from)` | Sender ID or phone number |
-| `WithReference(ref)` | Client-supplied reference, echoed back where the provider supports it |
-| `WithSchedule(t)` | Schedule for future delivery (Twilio) |
-| `WithValidity(d)` | How long the message stays valid for delivery |
-| `WithMetadata(key, val)` | Arbitrary provider-specific data |
+| Field / method           | Purpose                                                               |
+| ------------------------ | --------------------------------------------------------------------- |
+| `To`, `Body`             | Set via `NewMessage(to, body)`                                        |
+| `WithFrom(from)`         | Sender ID or phone number                                             |
+| `WithReference(ref)`     | Client-supplied reference, echoed back where the provider supports it |
+| `WithSchedule(t)`        | Schedule for future delivery (Twilio)                                 |
+| `WithValidity(d)`        | How long the message stays valid for delivery                         |
+| `WithMetadata(key, val)` | Arbitrary provider-specific data                                      |
 
 ## Result and Status
 
