@@ -35,17 +35,17 @@ msg91.SetVar(msg, "otp", "1234")
 result, err := client.SendMessage(ctx, msg)
 ```
 
-| Field | Purpose |
-| --- | --- |
-| `AuthKey` | MSG91 API auth key |
-| `SenderID` | 6-character DLT-registered sender ID |
-| `TemplateID` | Default DLT-approved Flow template |
-| `Route` | `msg91.RouteTransactional` (default, route 4) or `msg91.RoutePromotional` (route 1) |
-| `Country` | Default country code used to normalize short numbers — see below (default `91`) |
-| `ShortURL` | Enable MSG91's URL shortening |
-| `MaxRecipientsPerCall` | Chunk size for `SendBulk` (default `1000`; negative disables chunking) |
-| `HTTPClient` | Optional — override the default `*http.Client` |
-| `BaseURL` | Optional — override the MSG91 API base URL (testing) |
+| Field                  | Purpose                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `AuthKey`              | MSG91 API auth key                                                                  |
+| `SenderID`             | 6-character DLT-registered sender ID                                                |
+| `TemplateID`           | Default DLT-approved Flow template                                                  |
+| `Route`                | `msg91.RouteTransactional` (default, route 4) or `msg91.RoutePromotional` (route 1) |
+| `Country`              | Default country code used to normalize short numbers — see below (default `91`)     |
+| `ShortURL`             | Enable MSG91's URL shortening                                                       |
+| `MaxRecipientsPerCall` | Chunk size for `SendBulk` (default `1000`; negative disables chunking)              |
+| `HTTPClient`           | Optional — override the default `*http.Client`                                      |
+| `BaseURL`              | Optional — override the MSG91 API base URL (testing)                                |
 
 ## Template variables and `Body` fallback
 

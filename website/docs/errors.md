@@ -33,34 +33,34 @@ if err != nil {
 }
 ```
 
-| Error | Meaning |
-| --- | --- |
-| `ErrInvalidConfig` | Provider configuration failed validation |
-| `ErrInvalidPhone` | Recipient (or sender) phone number is invalid |
-| `ErrInvalidMessage` | Message content failed validation (e.g. empty body) |
-| `ErrSendFailed` | Generic send failure not covered by a more specific error |
-| `ErrProviderError` | The provider's API returned an error |
-| `ErrRateLimited` | The provider is rate-limiting this account |
-| `ErrInsufficientFunds` | Account balance too low to send |
-| `ErrBlacklisted` | Recipient number is blacklisted |
-| `ErrUnsupported` | The provider doesn't support the requested operation (e.g. SNS's `GetStatus`) |
+| Error                  | Meaning                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `ErrInvalidConfig`     | Provider configuration failed validation                                      |
+| `ErrInvalidPhone`      | Recipient (or sender) phone number is invalid                                 |
+| `ErrInvalidMessage`    | Message content failed validation (e.g. empty body)                           |
+| `ErrSendFailed`        | Generic send failure not covered by a more specific error                     |
+| `ErrProviderError`     | The provider's API returned an error                                          |
+| `ErrRateLimited`       | The provider is rate-limiting this account                                    |
+| `ErrInsufficientFunds` | Account balance too low to send                                               |
+| `ErrBlacklisted`       | Recipient number is blacklisted                                               |
+| `ErrUnsupported`       | The provider doesn't support the requested operation (e.g. SNS's `GetStatus`) |
 
 ## Delivery status
 
 `DeliveryStatus` is a string enum describing where a message is in its
 lifecycle:
 
-| Status | Description |
-| --- | --- |
-| `StatusPending` | Message is pending |
-| `StatusQueued` | Message is queued for delivery |
-| `StatusAccepted` | Message accepted by provider |
-| `StatusSent` | Message sent to carrier |
-| `StatusDelivered` | Message delivered to recipient |
-| `StatusFailed` | Delivery failed |
-| `StatusRejected` | Message was rejected |
-| `StatusExpired` | Message expired before delivery |
-| `StatusUnknown` | Status unknown |
+| Status            | Description                     |
+| ----------------- | ------------------------------- |
+| `StatusPending`   | Message is pending              |
+| `StatusQueued`    | Message is queued for delivery  |
+| `StatusAccepted`  | Message accepted by provider    |
+| `StatusSent`      | Message sent to carrier         |
+| `StatusDelivered` | Message delivered to recipient  |
+| `StatusFailed`    | Delivery failed                 |
+| `StatusRejected`  | Message was rejected            |
+| `StatusExpired`   | Message expired before delivery |
+| `StatusUnknown`   | Status unknown                  |
 
 Two helpers classify a status:
 

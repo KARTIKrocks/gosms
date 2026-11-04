@@ -45,14 +45,14 @@ if otp, ok := provider.(gosms.OTPProvider); ok {
 
 `OTPRequest` (passed to `SendOTP`):
 
-| Field | Purpose |
-| --- | --- |
-| `Phone` | Recipient phone number (E.164 recommended) |
-| `OTP` | Code to send; when empty, providers that support server-side generation produce one |
-| `Length` | Desired OTP length when the provider generates the code (ignored when `OTP` is set); typical range 4-9 |
-| `Expiry` | How long the OTP remains valid |
+| Field        | Purpose                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `Phone`      | Recipient phone number (E.164 recommended)                                                                        |
+| `OTP`        | Code to send; when empty, providers that support server-side generation produce one                               |
+| `Length`     | Desired OTP length when the provider generates the code (ignored when `OTP` is set); typical range 4-9            |
+| `Expiry`     | How long the OTP remains valid                                                                                    |
 | `TemplateID` | Provider template identifier (e.g. a DLT template ID for MSG91); overrides any default configured on the provider |
-| `Vars` | Template variables beyond the OTP itself |
+| `Vars`       | Template variables beyond the OTP itself                                                                          |
 
 `OTPResult` (returned by `SendOTP`): `MessageID`, `Phone`, `SentAt`, `Raw`.
 

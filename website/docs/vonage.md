@@ -26,16 +26,16 @@ client := gosms.NewClient(provider)
 result, err := client.Send(ctx, "+15559876543", "Hello from Vonage!")
 ```
 
-| Field | Purpose |
-| --- | --- |
-| `APIKey`, `APISecret` | Vonage API credentials |
-| `From` | Default sender ID or number |
-| `Type` | `vonage.TypeText` (default), `TypeUnicode`, or `TypeBinary` |
-| `TTL` | Message time-to-live in milliseconds |
-| `StatusReportRequired` | Request a delivery receipt callback |
-| `CallbackURL` | Where Vonage posts delivery receipts |
-| `HTTPClient` | Optional — override the default `*http.Client` |
-| `BaseURL` | Optional — override the Vonage API base URL (testing) |
+| Field                  | Purpose                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `APIKey`, `APISecret`  | Vonage API credentials                                      |
+| `From`                 | Default sender ID or number                                 |
+| `Type`                 | `vonage.TypeText` (default), `TypeUnicode`, or `TypeBinary` |
+| `TTL`                  | Message time-to-live in milliseconds                        |
+| `StatusReportRequired` | Request a delivery receipt callback                         |
+| `CallbackURL`          | Where Vonage posts delivery receipts                        |
+| `HTTPClient`           | Optional — override the default `*http.Client`              |
+| `BaseURL`              | Optional — override the Vonage API base URL (testing)       |
 
 ## Webhook
 
